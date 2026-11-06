@@ -1,0 +1,15 @@
+OK  16.88:1  texto ink-900 / surface
+OK  7.56:1  texto secundario ink-500 / blanco
+OK  7.19:1  texto secundario ink-500 / surface
+OK  10.31:1  label ink-700 / blanco
+OK  5.48:1  botón blanco / brand-600
+OK  7.68:1  éxito brand-700 / blanco
+OK  9.72:1  total blanco / brand-900
+OK  8.57:1  etiqueta total brand-100 / brand-900
+OK  6.42:1  error campo red-700 / blanco
+OK  7.67:1  alerta red-800 / red-50
+OK  6.54:1  badge sky-800 / sky-100
+OK  6.41:1  badge amber-800 / amber-100
+OK  7.71:1  badge violet-800 / violet-100
+OK  5.22:1  foco brand-600 / surface (no texto, ≥3)
+Todos los pares cumplen WCAG AA

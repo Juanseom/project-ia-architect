@@ -1,4 +1,6 @@
 export { useAuth } from './useAuth'
 export { useProducts } from './useProducts'
 export { useEmissions } from './useEmissions'
-export type { UseEmissionsResult } from './useEmissions'
+export type { EmissionsState, UseEmissionsResult } from './useEmissions'
+export { useEmissionForm } from './useEmissionForm'
+export type { UseEmissionFormOptions, UseEmissionFormResult } from './useEmissionForm'

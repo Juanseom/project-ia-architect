@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import {
   EmissionForm,
   EmissionList,
@@ -7,57 +6,44 @@ import {
   EmissionsLoading,
   EmissionsSummary,
 } from '../components'
-import { useEmissions } from '../hooks'
-import type { EmissionFormValues } from '../types'
-import { summarizeEmissions } from '../utils'
+import { useEmissionForm, useEmissions } from '../hooks'
 
-const EMPTY_FORM: EmissionFormValues = { source: '', category: '', co2Kg: '' }
-
-/** Contenedor del dashboard: une useEmissions (lógica) con los componentes de emissions/ (UI). */
+/** Contenedor del dashboard: une useEmissions + useEmissionForm (lógica) con los componentes de emissions/ (UI). */
 export function EmissionsTracker() {
-  const { emissions, loading, error, isSubmitting, submitError, addEmission, reload } = useEmissions()
-  const [form, setForm] = useState<EmissionFormValues>(EMPTY_FORM)
-
-  const handleChange = <K extends keyof EmissionFormValues>(field: K, value: EmissionFormValues[K]) => {
-    setForm((prev) => ({ ...prev, [field]: value }))
-  }
-
-  const handleSubmit = async () => {
-    if (form.category === '') return
-    const saved = await addEmission({ source: form.source, category: form.category, co2Kg: Number(form.co2Kg) })
-    if (saved) setForm(EMPTY_FORM)
-  }
-
-  const { totalKg, byCategory } = summarizeEmissions(emissions)
-
-  let content
-  if (loading) content = <EmissionsLoading />
-  else if (error) content = <EmissionsError message={error} onRetry={reload} />
-  else if (emissions.length === 0) content = <EmissionsEmpty />
-  else content = <EmissionList emissions={emissions} />
+  const { state, summary, canSubmit, isSubmitting, submitError, addEmission, reload } = useEmissions()
+  const form = useEmissionForm({ onSubmit: addEmission })
 
   return (
-    <section className="space-y-8">
+    <div className="space-y-8">
       <header>
         <h1 className="text-2xl font-bold sm:text-3xl">Dashboard de emisiones</h1>
-        <p className="text-ink-500">Mediciones de CO₂ de tu empresa</p>
+        <p className="text-ink-500">Huella de carbono de tu empresa, actualizada en tiempo real.</p>
       </header>
 
-      <EmissionsSummary totalKg={totalKg} byCategory={byCategory} />
+      <EmissionsSummary totals={summary} loading={state.status === 'loading'} />
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_20rem]">
-        <div>
-          <h2 className="mb-4 text-lg font-semibold">Mediciones</h2>
-          {content}
-        </div>
+      <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <section aria-labelledby="list-title" aria-busy={state.status === 'loading'}>
+          <h2 id="list-title" className="mb-4 text-lg font-semibold">Mediciones</h2>
+          {state.status === 'loading' && <EmissionsLoading />}
+          {state.status === 'error' && <EmissionsError message={state.error} onRetry={reload} />}
+          {state.status === 'empty' && <EmissionsEmpty onCreate={form.focusFirstField} />}
+          {state.status === 'success' && <EmissionList emissions={state.emissions} />}
+        </section>
+
         <EmissionForm
-          values={form}
-          onChange={handleChange}
-          onSubmit={handleSubmit}
+          values={form.values}
+          errors={form.errors}
+          onFieldChange={form.setField}
+          onFieldBlur={form.touchField}
+          onSubmit={form.submit}
           isSubmitting={isSubmitting}
+          disabled={!canSubmit}
           submitError={submitError}
+          successMessage={form.successMessage}
+          focusRequest={form.focusRequest}
         />
       </div>
-    </section>
+    </div>
   )
 }

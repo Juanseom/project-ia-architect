@@ -1,27 +1,37 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { emissionsService, getErrorMessage, type EmissionsService } from '../services'
 import type { Emission, NewEmission } from '../types'
+import { summarizeEmissions, type EmissionsTotals } from '../utils'
 import { useAuth } from './useAuth'
 
+/** Estado del listado como unión discriminada: `emissions` solo existe cuando hay datos. */
+export type EmissionsState =
+  | { status: 'loading' }
+  | { status: 'error'; error: string }
+  | { status: 'empty' }
+  | { status: 'success'; emissions: readonly Emission[] }
+
 export interface UseEmissionsResult {
-  emissions: Emission[]
-  /** true mientras se obtiene la sesión o se cargan las mediciones. */
-  loading: boolean
-  /** Error de carga ya traducido para la UI (o null). */
-  error: string | null
+  state: EmissionsState
+  /** Total y desglose; null mientras carga o si falló (para no mostrar ceros falsos). */
+  summary: EmissionsTotals | null
+  /** false si no hay sesión lista: el formulario se deshabilita. */
+  canSubmit: boolean
   isSubmitting: boolean
   /** Error del último intento de inserción (no reemplaza el listado). */
   submitError: string | null
-  /** Inserta una medición. Resuelve true si se guardó (para limpiar el formulario solo en ese caso). */
+  /** Inserta una medición. Resuelve true si se guardó. */
   addEmission: (input: NewEmission) => Promise<boolean>
   reload: () => void
 }
 
 interface LoadResult {
   key: string
-  emissions: Emission[]
+  emissions: readonly Emission[]
   error: string | null
 }
+
+const EMPTY: readonly Emission[] = []
 
 /**
  * Lógica del dashboard de emisiones: carga, inserción y errores.
@@ -36,14 +46,12 @@ export function useEmissions(service: EmissionsService = emissionsService): UseE
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
-  // Cada carga se identifica por (usuario, reloadToken). `loading` se DERIVA comparando la clave
-  // del último resultado con la actual: no hace falta setLoading(true) dentro del efecto.
+  // Cada carga se identifica por (usuario, reloadToken). El estado de carga se DERIVA comparando la clave
+  // del último resultado con la actual: no hace falta setState síncrono dentro del efecto.
   const requestKey = userId === null ? null : `${userId}:${reloadToken}`
 
-  // Evita setState después de desmontar en operaciones iniciadas por el usuario (addEmission).
-  const mountedRef = useRef(false)
-  // Evita doble envío aunque el estado isSubmitting aún no se haya re-renderizado.
-  const submittingRef = useRef(false)
+  const mountedRef = useRef(false) // evita setState tras desmontar en addEmission
+  const submittingRef = useRef(false) // evita doble envío antes de que isSubmitting se re-renderice
 
   useEffect(() => {
     mountedRef.current = true
@@ -52,8 +60,7 @@ export function useEmissions(service: EmissionsService = emissionsService): UseE
     }
   }, [])
 
-  // `active` descarta respuestas de efectos ya limpiados: en StrictMode el primer efecto se limpia
-  // antes de responder, y en un reload rápido la respuesta vieja no pisa a la nueva.
+  // `active` descarta respuestas de efectos ya limpiados (primer efecto de StrictMode o reload anterior).
   useEffect(() => {
     if (requestKey === null) return
     let active = true
@@ -63,7 +70,7 @@ export function useEmissions(service: EmissionsService = emissionsService): UseE
         if (active) setResult({ key: requestKey, emissions, error: null })
       })
       .catch((e: unknown) => {
-        if (active) setResult({ key: requestKey, emissions: [], error: getErrorMessage(e) })
+        if (active) setResult({ key: requestKey, emissions: EMPTY, error: getErrorMessage(e) })
       })
     return () => {
       active = false
@@ -104,11 +111,29 @@ export function useEmissions(service: EmissionsService = emissionsService): UseE
   )
 
   const current = result !== null && result.key === requestKey ? result : null
+  const authError = auth.status === 'error' ? auth.error : null
+
+  // Memo: el objeto de estado y su arreglo solo cambian cuando cambian los datos, no cuando la página
+  // se re-renderiza por el formulario. Así React.memo en EmissionList/EmissionCard puede saltarse renders.
+  const state = useMemo<EmissionsState>(() => {
+    if (authError !== null) return { status: 'error', error: authError }
+    if (current === null) return { status: 'loading' }
+    if (current.error !== null) return { status: 'error', error: current.error }
+    if (current.emissions.length === 0) return { status: 'empty' }
+    return { status: 'success', emissions: current.emissions }
+  }, [authError, current])
+
+  // Memo: summarizeEmissions recorre toda la lista; sin memo se recalculaba en cada tecleo del formulario.
+  const emissionsForSummary = state.status === 'success' ? state.emissions : state.status === 'empty' ? EMPTY : null
+  const summary = useMemo(
+    () => (emissionsForSummary === null ? null : summarizeEmissions(emissionsForSummary)),
+    [emissionsForSummary],
+  )
 
   return {
-    emissions: current?.emissions ?? [],
-    loading: auth.status === 'loading' || (requestKey !== null && current === null),
-    error: auth.status === 'error' ? auth.error : (current?.error ?? null),
+    state,
+    summary,
+    canSubmit: userId !== null,
     isSubmitting,
     submitError,
     addEmission,

@@ -24,3 +24,20 @@ export interface EmissionFormValues {
   category: EmissionCategory | ''
   co2Kg: string
 }
+
+/** Campos del formulario, en el orden en que aparecen (se usa para enfocar el primero inválido). */
+export type EmissionField = keyof EmissionFormValues
+export const EMISSION_FIELDS: readonly EmissionField[] = ['source', 'category', 'co2Kg']
+
+/** Mensaje de error por campo (solo los campos inválidos tienen clave). */
+export type EmissionFieldErrors = Partial<Record<EmissionField, string>>
+
+export type EmissionValidationResult =
+  | { ok: true; value: NewEmission }
+  | { ok: false; errors: EmissionFieldErrors }
+
+/** Pedido de foco hacia un campo; el token cambia en cada pedido para poder enfocar el mismo campo dos veces. */
+export interface FocusRequest {
+  field: EmissionField
+  token: number
+}

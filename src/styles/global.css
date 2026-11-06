@@ -3,7 +3,7 @@
 /*
  * Tokens de diseño de EcoTrack (Tailwind v4: se definen en CSS con @theme).
  * Generan utilidades como bg-brand-600, text-ink-900 o font-sans.
- * Paleta elegida para contraste AA sobre fondo claro.
+ * Contraste AA verificado (ver docs/BITACORA_PROMPTS.md, iteración 3).
  */
 @theme {
   --font-sans: ui-sans-serif, system-ui, sans-serif;
@@ -24,5 +24,10 @@
 @layer base {
   body {
     @apply bg-surface font-sans text-ink-900 antialiased;
+  }
+
+  /* Foco visible para cualquier control que no defina el suyo (navegación por teclado). */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-600;
   }
 }

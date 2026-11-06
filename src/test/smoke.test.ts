@@ -8,6 +8,7 @@ describe('entorno de pruebas', () => {
   })
 
   it('importa utilidades del proyecto', () => {
-    expect(formatKgCO2(1.5)).toBe('1.50 kg CO₂e')
+    expect(formatKgCO2(1.5)).toBe('1,50 kg CO₂e')
+    expect(formatKgCO2(4980.75)).toBe('4.980,75 kg CO₂e')
   })
 })

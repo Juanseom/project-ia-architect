@@ -1,14 +1,15 @@
+import { memo } from 'react'
 import type { Emission } from '../../types'
 import { EmissionCard } from './EmissionCard'
 
 export interface EmissionListProps {
-  emissions: Emission[]
+  emissions: readonly Emission[]
 }
 
-/** Grid de tarjetas. Asume una lista no vacía: el estado vacío lo decide el contenedor. */
-export function EmissionList({ emissions }: EmissionListProps) {
+/** Grid responsive de tarjetas: 1 columna en móvil, 2 en tablet, 3 en escritorio. */
+export const EmissionList = memo(function EmissionList({ emissions }: EmissionListProps) {
   return (
-    <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {emissions.map((emission) => (
         <li key={emission.id}>
           <EmissionCard emission={emission} />
@@ -16,4 +17,4 @@ export function EmissionList({ emissions }: EmissionListProps) {
       ))}
     </ul>
   )
-}
+})

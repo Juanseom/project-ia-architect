@@ -13,8 +13,8 @@ y, cuando aplica, `npm run db:lint` + pruebas RLS en psql.
 |---|---|---|---|
 | 0 — Setup y plano | (sin prompt de código; ver abajo) | `fase-0` | `2aa27c8` |
 | 1 — Estructura | `docs/prompts/01-estructura.md` | `iter-1` | `f1d4c25` |
-| 2 — Lógica | `docs/prompts/02-logica.md` | `iter-2` | _se anota en la iteración 3_ |
-| 3 — Refinamiento | `docs/prompts/03-refinamiento.md` | `iter-3` | |
+| 2 — Lógica | `docs/prompts/02-logica.md` | `iter-2` | `7dbc3e0` |
+| 3 — Refinamiento | `docs/prompts/03-refinamiento.md` | `iter-3` | _se anota en la iteración 4_ |
 | 4 — Tiempo real y cierre | `docs/prompts/04-realtime-cierre.md` | `iter-4` | |
 
 ---
@@ -204,7 +204,89 @@ const saved = await addEmission({ ... }); if (saved) setForm(EMPTY_FORM)   // li
 
 ## Iteración 3 — Refinamiento
 
-_Pendiente._
+**Prompt literal:** [`docs/prompts/03-refinamiento.md`](prompts/03-refinamiento.md). Redactado a partir de los hallazgos (a)–(h) de las
+iteraciones 1 y 2 y ejecutado con la instrucción del Arquitecto de continuar sin pausa ("si no necesitas algo de mí, continúa").
+
+**Objetivo:** endurecer el código que ya funcionaba: TypeScript estricto, accesibilidad, validación, re-renders, UI profesional y tests.
+
+**Qué generó (por restricción)**
+- *TypeScript:* `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitOverride` en `tsconfig.app.json`.
+  `useEmissions` expone `state` como unión discriminada (`loading | error | empty | success`, `emissions` solo existe en `success`).
+  `isEmissionCategory` (type guard) reemplaza el cast del `<select>`. `FocusRequest` y `EmissionFieldErrors` viven en `types/`.
+- *Validación:* `utils/validation.ts` → `validateEmission(values)` con las mismas reglas que el CHECK (2–100 tras trim, ENUM, > 0,
+  ≤ 2 decimales, ≤ 9.999.999.999,99) y acepta coma decimal ("845,3"). `hooks/useEmissionForm.ts`: errores por campo tras blur
+  o intento de envío, se corrigen en vivo, pedido de foco al primer inválido, mensaje de éxito.
+- *Accesibilidad:* labels asociados, `aria-required`, `aria-invalid` + `aria-describedby` (pista + error), foco al primer inválido,
+  éxito en `<output aria-live="polite">`, error de envío y de carga con `role="alert"`, `aria-busy` en el listado, el resumen y el
+  formulario, skeleton `aria-hidden` con texto para lectores, resumen como `<dl>` con encabezado, `focus-visible` global,
+  objetivos táctiles de 44 px (`min-h-11`), `motion-reduce` en animaciones.
+- *Re-renders:* `useMemo` para `state` y `summary` en el hook, `useCallback` en todos los handlers de los hooks,
+  `React.memo` en `EmissionCard`, `EmissionList`, `EmissionsSummary` y `EmissionForm`.
+- *UI:* skeletons de tarjetas y resumen, el resumen ya no muestra ceros falsos (skeleton al cargar, "—" con error), estado vacío con
+  CTA que enfoca el formulario, formato es-CO, badges de color por categoría (siempre con texto), formulario deshabilitado sin sesión.
+- *Tests (44 en total):* `validation.test.ts` (16), `useEmissions.test.tsx` (8: carga, vacío, error de red + reload, inserción,
+  error de inserción conservando el listado, doble envío, sin sesión, desmontaje), `emission-form.integration.test.tsx` (6: a11y y foco),
+  `EmissionsTracker.renders.test.tsx` (1: medición de renders).
+
+**Medición de re-renders antes/después** (mismo escenario: 20 tarjetas, escribir "Caldera 01" en el formulario):
+```
+ANTES (código de la iteración 2):  RENDERS ANTES: iniciales=20 tras escribir 10 caracteres=200
+DESPUÉS (memo + referencias estables): 0 renders de tarjetas  → afirmado en EmissionsTracker.renders.test.tsx
+```
+Método: `formatMeasuredAt` solo lo llama `EmissionCard`, así que se reemplaza por un contador con `vi.mock('../utils')`.
+
+**Lo que salió bien a la primera:** activar `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes` dio **0 errores** (`tsc -b` exit 0):
+el código previo ya usaba `?.` en accesos por índice. El flag queda como protección a futuro, no corrigió nada existente.
+
+**Problemas reales detectados en esta iteración**
+1. *Lint de accesibilidad* (plugin `jsx-a11y` activado en la Fase 0):
+   ```
+   src/components/emissions/EmissionsLoading.tsx:11:10: warning jsx-a11y(prefer-tag-over-role): Prefer `output` over `role` attribute `status`.
+   src/components/emissions/EmissionForm.tsx:177:29: warning jsx-a11y(prefer-tag-over-role): Prefer `output` over `role` attribute `status`.
+   ```
+   Se reemplazó `role="status"` por el elemento nativo `<output>`.
+2. *La regla de capas atrapó un test mal ubicado:*
+   ```
+   src/components/emissions/EmissionForm.test.tsx:4:1: error eslint(no-restricted-imports): '../../hooks' import is restricted from being used by a pattern.
+   ```
+   El test integra `useEmissionForm` + `EmissionForm`; se movió a `src/test/` en lugar de relajar la regla.
+3. *Foco perdido al enviar (revisión propia del primer borrador):* el borrador deshabilitaba el `<fieldset>` durante el envío; un control
+   `disabled` pierde el foco y el lector de pantalla queda en `<body>`. Se cambió a `aria-disabled` en el botón + guarda contra doble envío.
+4. *Valor partido en dos líneas* con 3 columnas a 1440 px ("1.250,50 kg / CO₂e", captura `docs/evidencias/iter-3/antes-valor-partido.png`).
+   Se separó número y unidad (`formatKg` + `CO2_UNIT`), con la unidad en tamaño menor y sin corte (`escritorio-1440.png`).
+5. *Medición responsive inválida en el primer intento:* contra Supabase, cada contexto de Playwright es un usuario anónimo nuevo sin
+   datos, así que no había `<ul>` que medir (reportó 1 columna en tablet). Se repitió en modo mock:
+   ```
+   movil-360: viewport=360px scrollWidth=360px columnas=1 sin scroll horizontal
+   movil: viewport=390px scrollWidth=390px columnas=1 sin scroll horizontal      (iPhone 13, emulación real)
+   tablet: viewport=768px scrollWidth=768px columnas=2 sin scroll horizontal     (iPad Mini)
+   escritorio: viewport=1440px scrollWidth=1440px columnas=3 sin scroll horizontal
+   ```
+6. *Comentario inexacto propio:* el código afirmaba "contraste ≥ 7:1" en los badges; el cálculo dio 6.41:1 (ámbar). Cumple AA, pero se
+   corrigió el comentario al valor medido.
+
+**Contraste WCAG** (`scripts/contrast.mjs`, salida en `docs/evidencias/iter-3/contraste-wcag.txt`): 14 pares, todos AA; el mínimo de texto es
+5.48:1 (blanco sobre `brand-600` en el botón) y el foco 5.22:1 (≥ 3 requerido para componentes no textuales).
+
+**Navegación por teclado (Playwright, contra Supabase):** orden de Tab "Registrar primera medición → Fuente → Categoría → CO₂ → Agregar
+medición"; Enter con el formulario vacío deja el foco en `emission-source`; tras guardar se anuncia
+`Medición "Montacargas a gas" (Transporte) agregada.`; consola sin errores ni warnings.
+
+**Evolución del código (antes → después)**
+```tsx
+// Iteración 2: errores solo del servidor, cast y recálculo en cada render
+onChange={(e) => onChange('category', e.target.value as EmissionFormValues['category'])}
+const { totalKg, byCategory } = summarizeEmissions(emissions)        // en la página, cada tecleo
+// Iteración 3: validación local por campo, type guard y memo
+category: isEmissionCategory(raw) ? raw : ''                         // useEmissionForm.setField
+const summary = useMemo(() => ..., [emissionsForSummary])            // useEmissions
+<input aria-invalid={errors.source !== undefined} aria-describedby="emission-source-hint emission-source-error" />
+```
+
+**Verificación:** `tsc -b` exit 0 · `oxlint` exit 0 (0 warnings) · `vitest run` 44/44 · `vite build` OK.
+
+**Para la Iteración 4:** el subtítulo ya promete "actualizada en tiempo real" pero aún no hay suscripción; falta README final y capturas
+automatizadas reproducibles (hoy son scripts temporales).
 
 ## Iteración 4 — Tiempo real y cierre
 

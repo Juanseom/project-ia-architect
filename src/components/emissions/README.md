@@ -8,7 +8,11 @@ Componentes **presentacionales** del dominio emisiones (EcoTrack).
 | `EmissionList` | Grid responsive de tarjetas (1 → 2 → 3 columnas). |
 | `EmissionForm` | Formulario **controlado** (values/onChange/onSubmit por props). |
 | `EmissionsSummary` | Total de CO₂ y desglose por categoría. |
-| `EmissionsLoading` / `EmissionsEmpty` / `EmissionsError` | Estados de la UI. |
+| `EmissionsLoading` / `EmissionsEmpty` / `EmissionsError` | Skeleton (`<output>` para lectores), vacío con CTA, error con `role="alert"`. |
+
+`EmissionCard`, `EmissionList`, `EmissionsSummary` y `EmissionForm` usan `React.memo`: escribir en el formulario no re-renderiza las tarjetas
+(medido: 200 → 0 renders, `src/pages/EmissionsTracker.renders.test.tsx`). Los tests de integración hook + componente viven en `src/test/`
+porque `components/` no puede importar hooks.
 
 - Reciben datos y callbacks por `props` tipadas y renderizan JSX con Tailwind.
 - Prohibido importar `hooks/`, `services/`, `context/` o `@supabase/supabase-js`.

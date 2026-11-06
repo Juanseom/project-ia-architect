@@ -2,7 +2,7 @@
 
 Componentes **presentacionales** de React: reciben `props`, renderizan JSX y emiten eventos.
 
-- `ui/`: átomos genéricos y reutilizables (Button, Card). No conocen el dominio.
+- `ui/`: átomos genéricos y reutilizables (Button, Card, Skeleton). No conocen el dominio.
 - `layout/`: estructura de la página (AppLayout, Header, Sidebar).
 - `inventory/`: componentes del dominio inventario (ProductList, ProductForm).
 - `emissions/`: componentes del dominio emisiones de EcoTrack (EmissionCard, EmissionForm...).

@@ -54,7 +54,7 @@ Etiquetas visibles: Transporte, Energía, Residuos. CO₂ se muestra como `kg CO
 | ID | Criterio | Verificación |
 |---|---|---|
 | CA-01 | Existen `src/pages/EmissionsTracker.tsx`, `src/hooks/useEmissions.ts`, `src/services/supabase/client.ts` y la migración de `emisiones`. | `ls` / revisión del repo |
-| CA-02 | Cada tarjeta muestra fuente, categoría con tilde ("Energía") y CO₂ formateado (`12.50 kg CO₂e`). | Test de componente + captura |
+| CA-02 | Cada tarjeta muestra fuente, categoría con tilde ("Energía") y CO₂ formateado en es-CO (`4.980,75 kg CO₂e`). | Test de componente + captura |
 | CA-03 | Mientras carga se muestra un skeleton con `aria-busy="true"`. | Test + captura de carga |
 | CA-04 | Sin mediciones se muestra un estado vacío con llamada a la acción. | Test + captura |
 | CA-05 | Si la carga falla se muestra un mensaje entendible (no el error crudo de Postgres) con `role="alert"` y botón "Reintentar". | Test del hook con mock que falla |

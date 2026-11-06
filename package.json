@@ -16,7 +16,8 @@
     "db:status": "supabase status",
     "db:reset": "supabase db reset",
     "db:lint": "supabase db lint --level warning",
-    "db:types": "supabase gen types typescript --local > src/services/supabase/database.types.ts"
+    "db:types": "supabase gen types typescript --local > src/services/supabase/database.types.ts",
+    "evidence": "node scripts/capture-evidence.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

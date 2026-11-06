@@ -8,6 +8,7 @@ Componentes **presentacionales** del dominio emisiones (EcoTrack).
 | `EmissionList` | Grid responsive de tarjetas (1 → 2 → 3 columnas). |
 | `EmissionForm` | Formulario **controlado** (values/onChange/onSubmit por props). |
 | `EmissionsSummary` | Total de CO₂ y desglose por categoría. |
+| `LiveIndicator` | Estado de la conexión en tiempo real (texto + color, anunciado con `<output>`). |
 | `EmissionsLoading` / `EmissionsEmpty` / `EmissionsError` | Skeleton (`<output>` para lectores), vacío con CTA, error con `role="alert"`. |
 
 `EmissionCard`, `EmissionList`, `EmissionsSummary` y `EmissionForm` usan `React.memo`: escribir en el formulario no re-renderiza las tarjetas

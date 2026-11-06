@@ -1,4 +1,4 @@
-import type { Emission, NewEmission } from '../types'
+import type { Emission, NewEmission, RealtimeStatus } from '../types'
 import type { EmissionsService } from './emissions.service'
 import { AppError, ERROR_MESSAGES } from './errors'
 
@@ -23,6 +23,7 @@ export interface MockEmissionsOptions {
  */
 export function createMockEmissionsService({ latencyMs = 600, seed = MOCK_SEED }: MockEmissionsOptions = {}): EmissionsService {
   let rows: Emission[] = [...seed]
+  const listeners = new Set<(emission: Emission) => void>()
   const wait = () => new Promise<void>((resolve) => setTimeout(resolve, latencyMs))
 
   return {
@@ -45,7 +46,17 @@ export function createMockEmissionsService({ latencyMs = 600, seed = MOCK_SEED }
         measuredAt: new Date().toISOString(),
       }
       rows = [created, ...rows]
+      // Como Realtime: el "eco" de la propia inserción llega por la suscripción (aquí, justo después de resolver).
+      queueMicrotask(() => listeners.forEach((listener) => listener(created)))
       return created
+    },
+
+    subscribeToInserts(onInsert: (emission: Emission) => void, onStatus: (status: RealtimeStatus) => void) {
+      listeners.add(onInsert)
+      queueMicrotask(() => onStatus('live'))
+      return () => {
+        listeners.delete(onInsert)
+      }
     },
   }
 }

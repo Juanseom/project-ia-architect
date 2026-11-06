@@ -5,19 +5,23 @@ import {
   EmissionsError,
   EmissionsLoading,
   EmissionsSummary,
+  LiveIndicator,
 } from '../components'
 import { useEmissionForm, useEmissions } from '../hooks'
 
 /** Contenedor del dashboard: une useEmissions + useEmissionForm (lógica) con los componentes de emissions/ (UI). */
 export function EmissionsTracker() {
-  const { state, summary, canSubmit, isSubmitting, submitError, addEmission, reload } = useEmissions()
+  const { state, summary, canSubmit, isSubmitting, submitError, addEmission, reload, realtime } = useEmissions()
   const form = useEmissionForm({ onSubmit: addEmission })
 
   return (
     <div className="space-y-8">
-      <header>
-        <h1 className="text-2xl font-bold sm:text-3xl">Dashboard de emisiones</h1>
-        <p className="text-ink-500">Huella de carbono de tu empresa, actualizada en tiempo real.</p>
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold sm:text-3xl">Dashboard de emisiones</h1>
+          <p className="text-ink-500">Huella de carbono de tu empresa, actualizada en tiempo real.</p>
+        </div>
+        <LiveIndicator status={realtime} />
       </header>
 
       <EmissionsSummary totals={summary} loading={state.status === 'loading'} />
@@ -35,7 +39,6 @@ export function EmissionsTracker() {
           values={form.values}
           errors={form.errors}
           onFieldChange={form.setField}
-          onFieldBlur={form.touchField}
           onSubmit={form.submit}
           isSubmitting={isSubmitting}
           disabled={!canSubmit}

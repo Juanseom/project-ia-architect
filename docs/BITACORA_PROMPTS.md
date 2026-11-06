@@ -14,8 +14,8 @@ y, cuando aplica, `npm run db:lint` + pruebas RLS en psql.
 | 0 — Setup y plano | (sin prompt de código; ver abajo) | `fase-0` | `2aa27c8` |
 | 1 — Estructura | `docs/prompts/01-estructura.md` | `iter-1` | `f1d4c25` |
 | 2 — Lógica | `docs/prompts/02-logica.md` | `iter-2` | `7dbc3e0` |
-| 3 — Refinamiento | `docs/prompts/03-refinamiento.md` | `iter-3` | _se anota en la iteración 4_ |
-| 4 — Tiempo real y cierre | `docs/prompts/04-realtime-cierre.md` | `iter-4` | |
+| 3 — Refinamiento | `docs/prompts/03-refinamiento.md` | `iter-3` | `eb7d305` |
+| 4 — Tiempo real y cierre | `docs/prompts/04-realtime-cierre.md` | `iter-4` | ver `git rev-parse iter-4` |
 
 ---
 
@@ -290,4 +290,81 @@ automatizadas reproducibles (hoy son scripts temporales).
 
 ## Iteración 4 — Tiempo real y cierre
 
-_Pendiente._
+**Prompt literal:** [`docs/prompts/04-realtime-cierre.md`](prompts/04-realtime-cierre.md). Nace del hallazgo final de la Iteración 3
+(la UI prometía "tiempo real" sin suscripción) y de que las capturas dependían de scripts temporales.
+
+**Objetivo:** Realtime robusto, evidencia reproducible y documentación de cierre.
+
+**Qué generó**
+```
+supabase/migrations/20261106005539_habilitar_realtime_emisiones.sql   alter publication supabase_realtime add table public.emisiones
+EmissionsService.subscribeToInserts(onInsert, onStatus) → () => void   canal postgres_changes INSERT + removeChannel; mock con eco
+parseEmissionRow(unknown)                                               valida el payload de Realtime sin casts (co2_kg número o texto)
+useEmissions                                                            suscripción por usuario, withEmission() deduplica por id, realtime status
+LiveIndicator                                                           "En vivo" / "Conectando…" / "Sin tiempo real" en <output>
+scripts/capture-evidence.mjs (npm run evidence)                         9 verificaciones + capturas en docs/evidencias/final/
+README final, ARCHITECTURE (flujo Realtime, D10–D14), SPEC §7 (estado de CA-01…CA-16)
+```
+
+**Deduplicación:** la inserción propia llega dos veces (respuesta de `create()` y eco de Realtime) y en orden no garantizado.
+Ambas rutas pasan por `withEmission(prev, e)`, que solo antepone si el `id` no existe. Probado en los dos órdenes
+(`useEmissions.test.tsx`: "eco DESPUÉS de create()" y "eco ANTES de que create() resuelva") y en navegador.
+
+**Problemas reales detectados**
+1. *Bug de usabilidad que los tests de jsdom no veían: el primer click en "Agregar medición" se perdía.* El script de evidencias
+   reportó `foco en ""` y solo 2 `aria-invalid` (se esperaban 3). Instrumentando el `onSubmit`:
+   ```
+   DEBUG handleSubmit isSubmitting= false      ← primer envío (válido)
+   --- segundo envío (inválido)
+   [ 'emission-source', 'emission-co2' ]       ← handleSubmit NUNCA se ejecutó
+   ```
+   Causa: al presionar el botón, el campo CO₂ pierde el foco; el error "en blur" (Iteración 3) aparece y **empuja el botón hacia abajo
+   entre mousedown y mouseup**, así que el click cae fuera. jsdom no calcula layout, por eso los 44 tests pasaban.
+   Solución: errores visibles al intentar enviar y, desde ahí, actualizados en vivo (patrón recomendado: no errores prematuros).
+   Después del cambio: `focus: 'emission-source', invalid: ['emission-source','emission-category','emission-co2']`.
+   Se agregaron 2 tests de regresión ("no muestra errores al salir de un campo" y "envío inválido DESPUÉS de uno exitoso").
+2. *Falso positivo en mi propio script:* "sin duplicados: 2 tarjeta(s)". `getByText` coincide por subcadena y contó también el
+   mensaje de éxito `Medición "Generador diésel…" agregada.`. Se corrigió contando solo `<article>`: 1 tarjeta.
+3. *`supabase migration new` se quedó colgado* (timeout de 120 s): con stdin canalizado el CLI espera el SQL por ahí. Al matarlo,
+   el resto de la cadena en segundo plano corrió `migration up` a la vez que el mío:
+   `ERROR: relation "emisiones" is already member of publication "supabase_realtime" (SQLSTATE 42710)`.
+   Para no depender de ese estado se hizo `supabase db reset`: las 3 migraciones se reaplicaron limpias y la tabla quedó en la publicación.
+   Se documentó en `CLAUDE.md` usar `< /dev/null`.
+4. *El contrato del servicio cambió y TypeScript lo hizo cumplir:* los servicios falsos de los tests fallaron con
+   `Property 'subscribeToInserts' is missing in type ... but required in type 'EmissionsService'` hasta implementarlo.
+
+**Verificación en navegador** (`npm run evidence`, salida en `docs/evidencias/final/capture-log.txt`):
+```
+03 validación: foco en "emission-source", campos con aria-invalid=true: 3
+05 tiempo real: la pestaña 1 pasó de 4 a 5 tarjetas sin recargar (~313 ms tras enviar en la pestaña 2)
+   deduplicación: la pestaña 2 (que insertó y recibió su propio eco) muestra 1 tarjeta con esa fuente
+06 aislamiento RLS en Realtime: el usuario B ve 0 tarjetas (esperado 0)
+07 carga lenta simulada (2,5 s): skeleton con aria-busy="true"
+08 movil-iphone13: viewport 390px, 1 columna(s), sin scroll horizontal
+09 tablet-ipad-mini: viewport 768px, 2 columna(s), sin scroll horizontal
+consola: sin errores
+```
+
+**Evolución del código (antes → después)**
+```ts
+// Iteración 3: la inserción propia filtraba duplicados solo en addEmission; no había suscripción
+setResult((prev) => prev && { ...prev, emissions: [created, ...prev.emissions.filter((e) => e.id !== created.id)] })
+// Iteración 4: una sola función para las dos rutas (create y Realtime) + suscripción con limpieza
+const unsubscribe = service.subscribeToInserts((e) => active && setResult((prev) => withEmission(prev, e)), (s) => active && setRealtime(s))
+return () => { active = false; unsubscribe() }        // → supabase.removeChannel(channel)
+```
+
+**Verificación final:** `tsc -b` exit 0 · `oxlint` exit 0 · `vitest run` **59/59** (9 archivos) · `vite build` OK ·
+`db:lint` "No schema errors found" · solo `src/services/` importa `@supabase/supabase-js` · sin claves en archivos versionados.
+
+---
+
+## Resumen de la evolución
+
+| Iteración | Disparador | Cambio principal | Problema real más importante |
+|---|---|---|---|
+| 0 | Setup | Tailwind v4, Supabase CLI, Vitest, reglas de capas en lint | El lint encontró `context/` importando el SDK de Supabase |
+| 1 | Spec | 7 componentes presentacionales con props tipadas | La app quedaba en blanco sin `.env` (fallo solo en ejecución) |
+| 2 | Hallazgos de la 1 | RLS + grants por columna, servicio Supabase/mock, `useEmissions` | StrictMode creaba 2 usuarios anónimos por carga (medido: 2 → 1) |
+| 3 | Hallazgos de la 2 | Validación, a11y, unión discriminada, memo | 200 renders de tarjetas al escribir 10 caracteres → 0 |
+| 4 | Hallazgos de la 3 | Realtime con deduplicación, evidencia reproducible | El error en blur desplazaba el botón y el click se perdía |

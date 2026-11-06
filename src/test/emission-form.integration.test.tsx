@@ -18,7 +18,6 @@ function Harness({ onSave, submitError = null, isSubmitting = false }: {
       values={form.values}
       errors={form.errors}
       onFieldChange={form.setField}
-      onFieldBlur={form.touchField}
       onSubmit={form.submit}
       isSubmitting={isSubmitting}
       disabled={false}
@@ -64,15 +63,39 @@ describe('EmissionForm + useEmissionForm', () => {
     expect(f.co2).toHaveAccessibleDescription(expect.stringContaining(M.co2Positive))
   })
 
-  it('muestra el error de un campo al salir de él y lo limpia al corregirlo', async () => {
+  it('no muestra errores al salir de un campo (evita que el botón se desplace bajo el cursor)', async () => {
     render(<Harness onSave={vi.fn(async () => true)} />)
     const f = fields()
     await userEvent.type(f.source, 'A')
     await userEvent.tab()
+    expect(screen.queryByText(M.sourceTooShort)).not.toBeInTheDocument()
+    expect(f.source).toHaveAttribute('aria-invalid', 'false')
+  })
+
+  it('tras un intento de envío, los errores se corrigen en vivo al escribir', async () => {
+    render(<Harness onSave={vi.fn(async () => true)} />)
+    const f = fields()
+    await userEvent.type(f.source, 'A')
+    await userEvent.click(f.submit)
     expect(screen.getByText(M.sourceTooShort)).toBeInTheDocument()
 
     await userEvent.type(f.source, 'B')
     expect(screen.queryByText(M.sourceTooShort)).not.toBeInTheDocument()
+  })
+
+  it('un envío inválido DESPUÉS de uno exitoso vuelve a validar todo y enfoca el primer inválido', async () => {
+    render(<Harness onSave={vi.fn(async () => true)} />)
+    const f = fields()
+    await userEvent.type(f.source, 'Primera fuente')
+    await userEvent.selectOptions(f.category, 'energia')
+    await userEvent.type(f.co2, '5')
+    await userEvent.click(f.submit)
+
+    await userEvent.type(f.source, 'A')
+    await userEvent.type(f.co2, '0')
+    await userEvent.click(f.submit)
+    expect(screen.getAllByRole('textbox').concat(f.category).filter((el) => el.getAttribute('aria-invalid') === 'true')).toHaveLength(3)
+    expect(f.source).toHaveFocus()
   })
 
   it('envía valores válidos, anuncia el éxito por aria-live, limpia y vuelve al primer campo', async () => {

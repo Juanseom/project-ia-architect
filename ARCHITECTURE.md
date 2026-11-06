@@ -57,15 +57,30 @@ La especificación funcional y los criterios de aceptación están en [docs/SPEC
 src/types/emission.ts                 Emission, EmissionCategory, NewEmission
 src/utils/formatters.ts               etiquetas con tilde ("Energía") y formato kg CO₂e
 src/services/emissions.service.ts     interfaz EmissionsService + impl. Supabase + impl. mock
+src/utils/validation.ts               validateEmission + isEmissionCategory (mismas reglas que el CHECK)
+src/services/emissions.mock.ts        implementación en memoria (demo y tests)
+src/services/errors.ts                AppError: PostgrestError/AuthError/red → mensaje en español
 src/hooks/useEmissions.ts             carga, inserción, errores y Realtime
-src/components/emissions/             EmissionCard, EmissionList, EmissionForm, EmissionsSummary, estados
+src/hooks/useEmissionForm.ts          valores, errores por campo, foco y mensaje de éxito
+src/components/emissions/             EmissionCard, EmissionList, EmissionForm, EmissionsSummary, LiveIndicator, estados
 src/pages/EmissionsTracker.tsx        contenedor: único consumidor de useEmissions
 supabase/migrations/<ts>_crear_emisiones.sql
 ```
 
-Flujo: `EmissionsTracker` → `useEmissions()` → `emissionsService` → `supabase.from('emisiones')`.
-Realtime: `useEmissions` se suscribe a INSERTs mediante una función del servicio, que devuelve la
-función de limpieza; el hook nunca ve el canal de Supabase.
+```
+EmissionsTracker (pages)
+ ├─ useEmissions(service) ──► emissionsService.list() / create()  ──► getSupabase().from('emisiones')   [RLS]
+ │        ▲                    emissionsService.subscribeToInserts ──► channel postgres_changes INSERT    [RLS]
+ │        └── setResult(withEmission(prev, e))  ◄── onInsert(Emission validada) ─┘
+ ├─ useEmissionForm({ onSubmit: addEmission }) ── validateEmission (utils)
+ └─ props ──► EmissionsSummary · EmissionList → EmissionCard · EmissionForm · LiveIndicator · estados
+```
+
+- **Carga:** clave `userId:reloadToken`; `loading` se deriva (sin setState síncrono en efectos); las respuestas de efectos
+  limpiados se descartan (StrictMode, reload rápido).
+- **Inserción propia + eco Realtime:** ambos pasan por `withEmission`, que deduplica por `id`; el orden de llegada no importa.
+- **Limpieza:** el servicio devuelve la función que hace `removeChannel`; el hook la llama al desmontar o cambiar de usuario.
+- **Estado para la UI:** unión discriminada `loading | error | empty | success`; `summary` memoizado y `null` sin datos fiables.
 
 ## 6. Decisiones (ADR resumidos)
 
@@ -79,7 +94,12 @@ función de limpieza; el hook nunca ve el canal de Supabase.
 | D6 | Reglas de capas verificadas por `oxlint` (`no-restricted-imports` con overrides por carpeta). | La regla "¿este componente importa services?" deja de depender de la revisión manual. |
 | D7 | Tailwind CSS v4 con `@tailwindcss/vite` y tokens en `@theme`. | Método vigente para Vite; sin `tailwind.config.js`. |
 | D8 | Supabase CLI fijado en la línea `v2.stable` (2.122.1). | Es la versión probada en MentorLink; la 3.0.0 salió como mayor reciente y no aporta nada al lab. |
-| D9 | Vitest 5 + Testing Library + jsdom. | Comparte la configuración de Vite; prueba hooks y componentes sin navegador real. |
+| D9 | Vitest 5 + Testing Library + jsdom; Playwright para lo que jsdom no ve (layout, Realtime, dispositivos). | Comparte la configuración de Vite; el bug de layout de la Iteración 4 solo se vio en navegador real. |
+| D10 | `env.ts` no lanza al importar y el cliente Supabase es perezoso. | En modo mock no hay variables de Supabase; una configuración faltante se muestra en la UI en vez de pantalla en blanco. |
+| D11 | `ensureUser()` comparte la promesa en vuelo. | StrictMode creaba 2 usuarios anónimos por carga (medido). |
+| D12 | Los errores del formulario se muestran al intentar enviar, no en el blur. | El mensaje que aparecía en el blur desplazaba el botón y el click se perdía (medido en navegador). |
+| D13 | `React.memo` en tarjetas/lista/resumen/form + `useMemo` del estado y el resumen. | Escribir 10 caracteres re-renderizaba 200 tarjetas; ahora 0 (test). |
+| D14 | El payload de Realtime se valida en ejecución (`parseEmissionRow`). | Llega como `Record<string, any>`; un cast escondería datos inválidos. |
 
 ## 7. Deuda técnica conocida (heredada de EcoTech)
 

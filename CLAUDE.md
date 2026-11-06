@@ -17,16 +17,17 @@ Repo de laboratorios de la Maestría (Escuela Colombiana de Ingeniería). Contie
 
 ## Stack y comandos
 Vite 8 · React 19 · TypeScript 7 strict · Tailwind CSS v4 (`@tailwindcss/vite`) · supabase-js 2 · Supabase CLI 2.122.1 (devDep)
-· Vitest 5 + Testing Library · oxlint.
+· Vitest 5 + Testing Library · Playwright 1.64 · oxlint (+ jsx-a11y).
 
 ```
 npm run dev | typecheck | lint | test | build
 npm run db:start | db:status | db:lint | db:reset | db:types   # requieren Docker
+npm run evidence                                                # capturas + verificación Realtime (Playwright)
 ```
 
 ## Reglas de arquitectura (las hace cumplir oxlint)
 - `pages → components`; `pages → hooks/context → services → services/supabase`. `types/` y `utils/` no importan a nadie.
-- Solo `src/services/**` importa `@supabase/supabase-js`. Tipos del SDK se re-exportan desde services (`AuthSession`).
+- Solo `src/services/**` importa `@supabase/supabase-js`. Los tipos del SDK se traducen a dominio en services (`User` → `AuthUser`).
 - `components/**` no importa hooks, services ni context: solo props + JSX.
 - Barrels: importar desde `'../hooks'`, nunca archivos internos. Cada carpeta tiene README + index.ts.
 - Servicios mapean snake_case (BD) → camelCase (dominio).
@@ -36,6 +37,10 @@ npm run db:start | db:status | db:lint | db:reset | db:types   # requieren Docke
 - RLS `to authenticated` con `(select auth.uid())`; `revoke all` + grants por columna; `security definer` con `set search_path = ''`.
 - Solo anon key en el frontend (de `npx supabase status`). Nunca service_role/secret.
 - Sesión anónima habilitada (`enable_anonymous_sign_ins = true`) solo para la demo.
+- `supabase migration new` lee SQL de stdin si está canalizado: ejecutarlo con `< /dev/null` o se queda colgado.
+
+## Estado
+Iteraciones 0–4 completas (tags `fase-0`, `iter-1`…`iter-4`). Pendiente: `docs/ENTREGA.md` cuando Sebastian diga que cerramos.
 
 ## Definición de terminado
 typecheck/lint/test/build verdes · capas respetadas · barrels y READMEs al día · feedback de loading/error/vacío/éxito

@@ -1,0 +1,11 @@
+01 estado vacío: OK (sesión anónima nueva, 0 mediciones)
+02 inserciones por la UI: 4 tarjetas
+03 validación: foco en "emission-source", campos con aria-invalid=true: 3
+04 escritorio 1440px con indicador "En vivo": OK
+05 tiempo real: la pestaña 1 pasó de 4 a 5 tarjetas sin recargar (~313 ms tras enviar en la pestaña 2)
+   deduplicación: la pestaña 2 (que insertó y recibió su propio eco) muestra 1 tarjeta con esa fuente
+06 aislamiento RLS en Realtime: el usuario B ve 0 tarjetas (esperado 0)
+07 carga lenta simulada (2,5 s): skeleton con aria-busy="true"
+08 movil-iphone13: viewport 390px, 1 columna(s), sin scroll horizontal
+09 tablet-ipad-mini: viewport 768px, 2 columna(s), sin scroll horizontal
+consola: sin errores

@@ -35,6 +35,7 @@ const RESULT: UseEmissionsResult = {
   submitError: null,
   addEmission: async () => true,
   reload: () => {},
+  realtime: 'live',
 }
 vi.mock('../hooks', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../hooks')>()),

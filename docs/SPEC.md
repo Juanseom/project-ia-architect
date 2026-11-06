@@ -69,3 +69,24 @@ Etiquetas visibles: Transporte, Energía, Residuos. CO₂ se muestra como `kg CO
 | CA-14 | Ningún archivo fuera de `services/` importa `@supabase/supabase-js`; ningún componente importa hooks/services/context. | `npm run lint` (`no-restricted-imports`) |
 | CA-15 | El grid de tarjetas pasa de 1 columna (móvil) a 2 (tablet) y 3 (escritorio). | Capturas móvil y escritorio |
 | CA-16 | No hay secretos en git y `.env.example` documenta todas las variables. | `git grep` de claves + revisión |
+
+## 7. Estado de los criterios de aceptación (cierre de la Iteración 4)
+
+| ID | Estado | Evidencia |
+|---|---|---|
+| CA-01 | ✅ | `src/pages/EmissionsTracker.tsx`, `src/hooks/useEmissions.ts`, `src/services/supabase/client.ts`, `supabase/migrations/2026110600*` |
+| CA-02 | ✅ | `docs/evidencias/final/04-escritorio.png`; `formatters` probados en `smoke.test.ts` |
+| CA-03 | ✅ | `final/07-cargando-skeleton.png` (latencia simulada 2,5 s, `aria-busy="true"`); `useEmissions.test.tsx` |
+| CA-04 | ✅ | `final/01-estado-vacio.png`; CTA enfoca el formulario |
+| CA-05 | ✅ | `useEmissions.test.tsx` ("traduce el error de carga y se recupera con reload()"); `errors.test.ts`; `iter-2/sin-config-error-visible.png` |
+| CA-06 | ✅ | `emission-form.integration.test.tsx` (8 casos); `final/03-error-validacion.png` (3 campos `aria-invalid`, foco en el primero) |
+| CA-07 | ✅ | `aria-disabled` + "Guardando…" y `<output aria-live="polite">` probados en `emission-form.integration.test.tsx` |
+| CA-08 | ✅ | `utils/emissions.test.ts` (incluye 0.1 + 0.2) y `useEmissions.test.tsx` |
+| CA-09 | ✅ | `supabase/tests/rls_emisiones.sql` → `docs/evidencias/iter-2/rls-psql.txt` (B ve 0 filas; suplantación bloqueada por grant y por RLS) |
+| CA-10 | ✅ | Mismo script, caso 8: `anon` → `permission denied` en select e insert |
+| CA-11 | ✅ | `npm run evidence`: pestaña 1 recibe la inserción de la pestaña 2 en ~313 ms, sin duplicados; otro usuario ve 0 (`final/capture-log.txt`) |
+| CA-12 | ✅ | `iter-2/mock-datos-semilla.png`; tests del hook con `createMockEmissionsService` |
+| CA-13 | ✅ | typecheck, lint, 59 tests, build y db:lint en verde (ver bitácora, Iteración 4) |
+| CA-14 | ✅ | `no-restricted-imports` en `.oxlintrc.json`; atrapó 2 violaciones heredadas (Fase 0) y 1 test mal ubicado (Iteración 3) |
+| CA-15 | ✅ | `final/08-movil-iphone13.png` (1 col.), `final/09-tablet-ipad-mini.png` (2 col.), `final/04-escritorio.png` (3 col.), sin scroll horizontal |
+| CA-16 | ✅ | `.env` ignorado (`git check-ignore`), escaneo de claves sobre el diff en cada commit; `.env.example` con las 3 variables |

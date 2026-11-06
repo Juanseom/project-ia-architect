@@ -10,6 +10,7 @@ import {
 import { formatCategory, isEmissionCategory, validateEmission } from '../utils'
 
 const EMPTY_FORM: EmissionFormValues = { source: '', category: '', co2Kg: '' }
+const NO_ERRORS: EmissionFieldErrors = {}
 
 export interface UseEmissionFormOptions {
   /** Guarda la medición; resuelve true si se guardó. */
@@ -18,12 +19,11 @@ export interface UseEmissionFormOptions {
 
 export interface UseEmissionFormResult {
   values: EmissionFormValues
-  /** Errores visibles (solo de campos tocados o tras intentar enviar). */
+  /** Errores visibles: aparecen al intentar enviar y desde ahí se actualizan en vivo. */
   errors: EmissionFieldErrors
   successMessage: string | null
   focusRequest: FocusRequest | null
   setField: (field: EmissionField, raw: string) => void
-  touchField: (field: EmissionField) => void
   submit: () => Promise<void>
   /** Lleva el foco al primer campo (CTA del estado vacío). */
   focusFirstField: () => void
@@ -32,7 +32,6 @@ export interface UseEmissionFormResult {
 /** Estado y validación del formulario de mediciones. La UI solo muestra lo que este hook decide. */
 export function useEmissionForm({ onSubmit }: UseEmissionFormOptions): UseEmissionFormResult {
   const [values, setValues] = useState<EmissionFormValues>(EMPTY_FORM)
-  const [touched, setTouched] = useState<Partial<Record<EmissionField, boolean>>>({})
   const [submitted, setSubmitted] = useState(false)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [focusRequest, setFocusRequest] = useState<FocusRequest | null>(null)
@@ -43,10 +42,6 @@ export function useEmissionForm({ onSubmit }: UseEmissionFormOptions): UseEmissi
       if (field === 'category') return { ...prev, category: isEmissionCategory(raw) ? raw : '' }
       return { ...prev, [field]: raw }
     })
-  }, [])
-
-  const touchField = useCallback((field: EmissionField) => {
-    setTouched((prev) => (prev[field] ? prev : { ...prev, [field]: true }))
   }, [])
 
   const requestFocus = useCallback((field: EmissionField) => {
@@ -64,7 +59,6 @@ export function useEmissionForm({ onSubmit }: UseEmissionFormOptions): UseEmissi
     const saved = await onSubmit(result.value)
     if (saved) {
       setValues(EMPTY_FORM)
-      setTouched({})
       setSubmitted(false)
       setSuccessMessage(`Medición "${result.value.source}" (${formatCategory(result.value.category)}) agregada.`)
       requestFocus('source')
@@ -73,14 +67,11 @@ export function useEmissionForm({ onSubmit }: UseEmissionFormOptions): UseEmissi
 
   const focusFirstField = useCallback(() => requestFocus('source'), [requestFocus])
 
-  // Errores derivados de los valores actuales: se corrigen en vivo mientras el usuario escribe.
+  // Errores derivados de los valores actuales, visibles solo tras un intento de envío.
+  // NO se muestran al salir de un campo (blur): el mensaje que aparece en el blur desplaza el botón
+  // "Agregar medición" entre mousedown y mouseup y el click se pierde (bug medido en la iteración 4).
   const validation = validateEmission(values)
-  const allErrors = validation.ok ? {} : validation.errors
-  const errors: EmissionFieldErrors = {}
-  for (const field of EMISSION_FIELDS) {
-    const message = allErrors[field]
-    if (message !== undefined && (submitted || touched[field])) errors[field] = message
-  }
+  const errors: EmissionFieldErrors = submitted && !validation.ok ? validation.errors : NO_ERRORS
 
-  return { values, errors, successMessage, focusRequest, setField, touchField, submit, focusFirstField }
+  return { values, errors, successMessage, focusRequest, setField, submit, focusFirstField }
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { emissionsService, getErrorMessage, type EmissionsService } from '../services'
-import type { Emission, NewEmission } from '../types'
+import type { Emission, NewEmission, RealtimeStatus } from '../types'
 import { summarizeEmissions, type EmissionsTotals } from '../utils'
 import { useAuth } from './useAuth'
 
@@ -23,6 +23,8 @@ export interface UseEmissionsResult {
   /** Inserta una medición. Resuelve true si se guardó. */
   addEmission: (input: NewEmission) => Promise<boolean>
   reload: () => void
+  /** Estado de la suscripción en tiempo real (indicador "En vivo"). */
+  realtime: RealtimeStatus
 }
 
 interface LoadResult {
@@ -32,6 +34,15 @@ interface LoadResult {
 }
 
 const EMPTY: readonly Emission[] = []
+
+/**
+ * Antepone una medición si aún no está (deduplicación por id). Se usa tanto al resolver create() como al
+ * recibir el eco de Realtime: el que llegue segundo no duplica, sin importar el orden.
+ */
+const withEmission = (prev: LoadResult | null, emission: Emission): LoadResult | null => {
+  if (prev === null || prev.emissions.some((e) => e.id === emission.id)) return prev
+  return { ...prev, emissions: [emission, ...prev.emissions] }
+}
 
 /**
  * Lógica del dashboard de emisiones: carga, inserción y errores.
@@ -45,6 +56,7 @@ export function useEmissions(service: EmissionsService = emissionsService): UseE
   const [result, setResult] = useState<LoadResult | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [realtime, setRealtime] = useState<RealtimeStatus>('connecting')
 
   // Cada carga se identifica por (usuario, reloadToken). El estado de carga se DERIVA comparando la clave
   // del último resultado con la actual: no hace falta setState síncrono dentro del efecto.
@@ -77,6 +89,24 @@ export function useEmissions(service: EmissionsService = emissionsService): UseE
     }
   }, [service, requestKey])
 
+  // Tiempo real: una suscripción por usuario; se limpia (removeChannel en el servicio) al desmontar o cambiar de usuario.
+  useEffect(() => {
+    if (userId === null) return
+    let active = true
+    const unsubscribe = service.subscribeToInserts(
+      (emission) => {
+        if (active) setResult((prev) => withEmission(prev, emission))
+      },
+      (status) => {
+        if (active) setRealtime(status)
+      },
+    )
+    return () => {
+      active = false
+      unsubscribe()
+    }
+  }, [service, userId])
+
   const authRetry = auth.retry
   const authFailed = auth.status === 'error'
 
@@ -93,11 +123,7 @@ export function useEmissions(service: EmissionsService = emissionsService): UseE
       setSubmitError(null)
       try {
         const created = await service.create(input)
-        if (mountedRef.current) {
-          setResult((prev) =>
-            prev && { ...prev, emissions: [created, ...prev.emissions.filter((e) => e.id !== created.id)] },
-          )
-        }
+        if (mountedRef.current) setResult((prev) => withEmission(prev, created))
         return true
       } catch (e: unknown) {
         if (mountedRef.current) setSubmitError(getErrorMessage(e))
@@ -138,5 +164,6 @@ export function useEmissions(service: EmissionsService = emissionsService): UseE
     submitError,
     addEmission,
     reload,
+    realtime: userId === null ? (auth.status === 'error' ? 'offline' : 'connecting') : realtime,
   }
 }

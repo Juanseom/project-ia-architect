@@ -13,7 +13,6 @@ export interface EmissionFormProps {
   values: EmissionFormValues
   errors: EmissionFieldErrors
   onFieldChange: (field: EmissionField, raw: string) => void
-  onFieldBlur: (field: EmissionField) => void
   onSubmit: () => void
   isSubmitting: boolean
   /** Deshabilita todo el formulario (sin sesión). */
@@ -53,7 +52,6 @@ export const EmissionForm = memo(function EmissionForm({
   values,
   errors,
   onFieldChange,
-  onFieldBlur,
   onSubmit,
   isSubmitting,
   disabled,
@@ -105,7 +103,6 @@ export const EmissionForm = memo(function EmissionForm({
             maxLength={EMISSION_RULES.sourceMax}
             value={values.source}
             onChange={(e) => onFieldChange('source', e.target.value)}
-            onBlur={() => onFieldBlur('source')}
             aria-required="true"
             aria-invalid={errors.source !== undefined}
             aria-describedby={describedBy('source', 'emission-source-hint')}
@@ -123,7 +120,6 @@ export const EmissionForm = memo(function EmissionForm({
             name="category"
             value={values.category}
             onChange={(e) => onFieldChange('category', e.target.value)}
-            onBlur={() => onFieldBlur('category')}
             aria-required="true"
             aria-invalid={errors.category !== undefined}
             aria-describedby={describedBy('category')}
@@ -148,7 +144,6 @@ export const EmissionForm = memo(function EmissionForm({
             autoComplete="off"
             value={values.co2Kg}
             onChange={(e) => onFieldChange('co2Kg', e.target.value)}
-            onBlur={() => onFieldBlur('co2Kg')}
             aria-required="true"
             aria-invalid={errors.co2Kg !== undefined}
             aria-describedby={describedBy('co2Kg', 'emission-co2-hint')}

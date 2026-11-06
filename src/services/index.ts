@@ -1,6 +1,6 @@
 export * as inventoryService from './inventory.service'
 export * as authService from './auth.service'
-export { emissionsService, supabaseEmissionsService } from './emissions.service'
+export { emissionsService, parseEmissionRow, supabaseEmissionsService } from './emissions.service'
 export type { EmissionsService } from './emissions.service'
 export { createMockEmissionsService, MOCK_SEED } from './emissions.mock'
 export type { MockEmissionsOptions } from './emissions.mock'

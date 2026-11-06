@@ -41,3 +41,6 @@ export interface FocusRequest {
   field: EmissionField
   token: number
 }
+
+/** Estado de la suscripción en tiempo real. */
+export type RealtimeStatus = 'connecting' | 'live' | 'offline'

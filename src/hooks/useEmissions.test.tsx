@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { AuthContext, type AuthContextValue } from '../context'
 import { AppError, createMockEmissionsService, ERROR_MESSAGES, type EmissionsService } from '../services'
-import type { Emission } from '../types'
+import type { Emission, RealtimeStatus } from '../types'
 import { useEmissions } from './useEmissions'
 
 const READY: AuthContextValue = {
@@ -50,7 +50,7 @@ describe('useEmissions', () => {
       .fn<EmissionsService['list']>()
       .mockRejectedValueOnce({ code: '', message: 'TypeError: Failed to fetch' })
       .mockImplementation(() => mock.list())
-    const service: EmissionsService = { list, create: mock.create }
+    const service: EmissionsService = { ...mock, list }
     const { result } = renderHook(() => useEmissions(service), { wrapper: wrapperWith(READY) })
 
     await waitFor(() => expect(result.current.state).toEqual({ status: 'error', error: ERROR_MESSAGES.network }))
@@ -82,7 +82,7 @@ describe('useEmissions', () => {
   it('si la inserción falla, conserva el listado y expone submitError', async () => {
     const mock = createMockEmissionsService({ latencyMs: 0, seed: SEED })
     const service: EmissionsService = {
-      list: mock.list,
+      ...mock,
       create: () => Promise.reject(new AppError('permission', ERROR_MESSAGES.permission)),
     }
     const { result } = renderHook(() => useEmissions(service), { wrapper: wrapperWith(READY) })
@@ -101,7 +101,7 @@ describe('useEmissions', () => {
   it('ignora un segundo envío mientras el primero está en curso', async () => {
     const mock = createMockEmissionsService({ latencyMs: 0, seed: [] })
     const create = vi.fn<EmissionsService['create']>((input) => mock.create(input))
-    const service: EmissionsService = { list: mock.list, create }
+    const service: EmissionsService = { ...mock, create }
     const { result } = renderHook(() => useEmissions(service), { wrapper: wrapperWith(READY) })
     await waitFor(() => expect(result.current.state.status).toBe('empty'))
 
@@ -139,3 +139,104 @@ describe('useEmissions', () => {
     errorSpy.mockRestore()
   })
 })
+
+/** Servicio controlable para simular Realtime: `emit` entrega un INSERT como lo haría el canal. */
+function createControllableService(seed: Emission[]) {
+  const mock = createMockEmissionsService({ latencyMs: 0, seed })
+  let listener: ((e: Emission) => void) | null = null
+  let statusListener: ((s: RealtimeStatus) => void) | null = null
+  const unsubscribe = vi.fn(() => {
+    listener = null
+  })
+  const service: EmissionsService = {
+    list: mock.list,
+    create: mock.create,
+    subscribeToInserts: (onInsert, onStatus) => {
+      listener = onInsert
+      statusListener = onStatus
+      return unsubscribe
+    },
+  }
+  return {
+    service,
+    unsubscribe,
+    emit: (e: Emission) => listener?.(e),
+    setStatus: (s: RealtimeStatus) => statusListener?.(s),
+  }
+}
+
+const REMOTE: Emission = { id: 'remote-1', source: 'Generador (otra pestaña)', category: 'energia', co2Kg: 42, measuredAt: '2026-11-06T10:00:00Z' }
+
+describe('useEmissions — tiempo real', () => {
+  it('antepone una inserción remota, actualiza el resumen y expone el estado de conexión', async () => {
+    const rt = createControllableService(SEED)
+    const { result } = renderHook(() => useEmissions(rt.service), { wrapper: wrapperWith(READY) })
+    await waitFor(() => expect(result.current.state.status).toBe('success'))
+    expect(result.current.realtime).toBe('connecting')
+
+    act(() => rt.setStatus('live'))
+    expect(result.current.realtime).toBe('live')
+
+    act(() => rt.emit(REMOTE))
+    const state = result.current.state
+    expect(state.status === 'success' && state.emissions.map((e) => e.id)).toEqual(['remote-1', '1', '2'])
+    expect(result.current.summary?.byCategory.energia).toBe(92.5)
+  })
+
+  it('no duplica si el mismo evento llega dos veces', async () => {
+    const rt = createControllableService(SEED)
+    const { result } = renderHook(() => useEmissions(rt.service), { wrapper: wrapperWith(READY) })
+    await waitFor(() => expect(result.current.state.status).toBe('success'))
+    act(() => {
+      rt.emit(REMOTE)
+      rt.emit(REMOTE)
+    })
+    const state = result.current.state
+    expect(state.status === 'success' && state.emissions.length).toBe(3)
+  })
+
+  it('deduplica la inserción propia cuando el eco llega DESPUÉS de create()', async () => {
+    // El mock real emite el eco en un microtask posterior a resolver create().
+    const service = createMockEmissionsService({ latencyMs: 0, seed: SEED })
+    const { result } = renderHook(() => useEmissions(service), { wrapper: wrapperWith(READY) })
+    await waitFor(() => expect(result.current.state.status).toBe('success'))
+    await act(async () => {
+      await result.current.addEmission({ source: 'Caldera', category: 'residuos', co2Kg: 1 })
+      await Promise.resolve()
+    })
+    const state = result.current.state
+    expect(state.status === 'success' && state.emissions.filter((e) => e.source === 'Caldera')).toHaveLength(1)
+  })
+
+  it('deduplica la inserción propia cuando el eco llega ANTES de que create() resuelva', async () => {
+    const rt = createControllableService(SEED)
+    const created: Emission = { id: 'own-1', source: 'Caldera', category: 'residuos', co2Kg: 1, measuredAt: '2026-11-06T11:00:00Z' }
+    rt.service.create = async () => {
+      rt.emit(created) // el eco de Realtime gana la carrera
+      return created
+    }
+    const { result } = renderHook(() => useEmissions(rt.service), { wrapper: wrapperWith(READY) })
+    await waitFor(() => expect(result.current.state.status).toBe('success'))
+    await act(async () => {
+      await result.current.addEmission({ source: 'Caldera', category: 'residuos', co2Kg: 1 })
+    })
+    const state = result.current.state
+    expect(state.status === 'success' && state.emissions.filter((e) => e.id === 'own-1')).toHaveLength(1)
+  })
+
+  it('cancela la suscripción al desmontar y no se suscribe sin sesión', async () => {
+    const rt = createControllableService(SEED)
+    const { result, unmount } = renderHook(() => useEmissions(rt.service), { wrapper: wrapperWith(READY) })
+    await waitFor(() => expect(result.current.state.status).toBe('success'))
+    unmount()
+    expect(rt.unsubscribe).toHaveBeenCalledTimes(1)
+
+    const noSession = createControllableService(SEED)
+    const subscribe = vi.spyOn(noSession.service, 'subscribeToInserts')
+    renderHook(() => useEmissions(noSession.service), {
+      wrapper: wrapperWith({ status: 'loading', retry: () => {}, signOut: async () => {} }),
+    })
+    expect(subscribe).not.toHaveBeenCalled()
+  })
+})
+

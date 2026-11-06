@@ -1,0 +1,1 @@
+Error: [seguridad] VITE_SUPABASE_ANON_KEY contiene una clave secreta de Supabase (service_role / sb_secret_). Las variables VITE_* se publican en el bundle: usa solo la anon/publishable key.

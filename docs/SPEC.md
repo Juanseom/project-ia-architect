@@ -90,3 +90,17 @@ Etiquetas visibles: Transporte, Energía, Residuos. CO₂ se muestra como `kg CO
 | CA-14 | ✅ | `no-restricted-imports` en `.oxlintrc.json`; atrapó 2 violaciones heredadas (Fase 0) y 1 test mal ubicado (Iteración 3) |
 | CA-15 | ✅ | `final/08-movil-iphone13.png` (1 col.), `final/09-tablet-ipad-mini.png` (2 col.), `final/04-escritorio.png` (3 col.), sin scroll horizontal |
 | CA-16 | ✅ | `.env` ignorado (`git check-ignore`), escaneo de claves sobre el diff en cada commit; `.env.example` con las 3 variables |
+
+## 8. Lab 5 — Auditoría, rendimiento y hardening (criterios adicionales)
+
+| ID | Criterio | Estado | Evidencia |
+|---|---|---|---|
+| CA-17 | `anon` no tiene privilegios sobre `products`, `emisiones` ni `emisiones_resumen`; todas las políticas son `to authenticated`. | ✅ | `supabase/tests/hardening_lab5.sql` (H1.1) |
+| CA-18 | Un usuario no puede inferir datos de otro por errores de unicidad (SKU único por dueño). | ✅ | `hardening_lab5.sql` (H1.2), PoC curl en `docs/AUDITORIA_LAB5.md` |
+| CA-19 | Un usuario no puede insertar más de 10 filas por solicitud, 30 por minuto ni 5.000 en total (HTTP 429 traducido en la UI). | ✅ | `hardening_lab5.sql` (H2.1–H2.2), `errors.test.ts`, `useEmissions.test.tsx` |
+| CA-20 | El total y el desglose del dashboard incluyen TODAS las mediciones aunque la lista muestre solo las 50 más recientes. | ✅ | Vista `emisiones_resumen`; PoC 30.000 kg; test "el resumen viene del servicio" |
+| CA-21 | El build falla si una variable `VITE_*` o un archivo generado contiene una clave secreta; `env.ts` la rechaza en ejecución. | ✅ | `docs/evidencias/lab5/h3-build-bloqueado.txt`, `config/env.test.ts` |
+| CA-22 | El build de producción incluye una CSP que bloquea scripts inline y limita `connect-src` al proyecto Supabase. | ✅ | Verificación en `vite preview` (script inyectado bloqueado, Realtime operativo) |
+| CA-23 | El SDK de Supabase y el mock no están en la ruta crítica; las rutas secundarias se cargan con `React.lazy` + `Suspense`. | ✅ | `dist/index.html`, `bundle-despues.txt`, `routing.integration.test.tsx` |
+| CA-24 | FCP y LCP mejoran ≥ 15 % con red 3G rápida + CPU 4× (mediana de ≥ 7 corridas). | ✅ | `docs/evidencias/lab5/rendimiento.txt` (−22,1 % ambos) |
+| CA-25 | Los tests no usan red ni el Supabase local. | ✅ | `vite.config.ts` → `test.env` (modo mock) |

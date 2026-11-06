@@ -8,4 +8,5 @@
 - Prohibido importar `supabase` directamente: siempre a través de un servicio.
 - `useEmissions(service?)`: carga, inserción y errores. Devuelve `state` (unión `loading | error | empty | success`), `summary` memoizado (null si no hay datos fiables), `canSubmit`, `isSubmitting`, `submitError`, `addEmission`, `reload` y `realtime` (`connecting | live | offline`); se suscribe a INSERTs y deduplica por id. Recibe el servicio por parámetro para probarlo con el mock.
 - `useEmissionForm({ onSubmit })`: valores, errores por campo (tras blur o intento de envío), pedido de foco al primer inválido y mensaje de éxito.
+- `useProducts()`: inventario (ruta `/inventario`); espera la sesión antes de consultar.
 - `useAuth()`: estado de sesión (`loading | ready | error`) + `retry` y `signOut`.

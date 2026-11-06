@@ -32,7 +32,7 @@ export function EmissionsTracker() {
           {state.status === 'loading' && <EmissionsLoading />}
           {state.status === 'error' && <EmissionsError message={state.error} onRetry={reload} />}
           {state.status === 'empty' && <EmissionsEmpty onCreate={form.focusFirstField} />}
-          {state.status === 'success' && <EmissionList emissions={state.emissions} />}
+          {state.status === 'success' && <EmissionList emissions={state.emissions} totalCount={summary?.count} />}
         </section>
 
         <EmissionForm

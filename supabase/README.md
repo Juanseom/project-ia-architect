@@ -6,4 +6,6 @@ Local: `npm run db:start` (Docker), `npm run db:lint`, `npm run db:types`.
 Remoto: `npx supabase db push`.
 
 `tests/rls_emisiones.sql`: prueba de RLS y privilegios con dos usuarios y `anon` (en transacción con ROLLBACK):
-`docker exec -i supabase_db_ecotrack psql -U postgres < supabase/tests/rls_emisiones.sql` El código cliente vive en `src/services/supabase/`.
+`docker exec -i supabase_db_ecotrack psql -U postgres < supabase/tests/rls_emisiones.sql`
+
+`tests/hardening_lab5.sql`: privilegios de `products`, SKU por dueño, límites de escritura (PT429) y vista `emisiones_resumen`. El código cliente vive en `src/services/supabase/`.

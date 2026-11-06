@@ -8,9 +8,9 @@ const MOCK_USER: AuthUser = { id: '00000000-0000-4000-8000-000000000000', isAnon
 
 const toAuthUser = (user: User): AuthUser => ({ id: user.id, isAnonymous: user.is_anonymous ?? false })
 
-function client() {
+async function client() {
   try {
-    return getSupabase()
+    return await getSupabase()
   } catch (error) {
     throw new AppError('config', error instanceof Error ? error.message : String(error), { cause: error })
   }
@@ -22,7 +22,7 @@ let pending: Promise<AuthUser> | null = null
 
 async function resolveUser(): Promise<AuthUser> {
   if (env.useMock) return MOCK_USER
-  const supabase = client()
+  const supabase = await client()
 
   const { data, error } = await supabase.auth.getSession()
   if (error) throw toAppError(error)
@@ -45,14 +45,26 @@ export function ensureUser(): Promise<AuthUser> {
 /** Notifica cambios de sesión. Devuelve la función para cancelar la suscripción. */
 export function onAuthChange(callback: (user: AuthUser | null) => void): () => void {
   if (env.useMock) return () => {}
-  const { data } = client().auth.onAuthStateChange((_event, session) => {
-    callback(session ? toAuthUser(session.user) : null)
-  })
-  return () => data.subscription.unsubscribe()
+  // El cliente se obtiene de forma asíncrona: si se cancela antes de que llegue, no se suscribe.
+  let cancelled = false
+  let unsubscribe = () => {}
+  client()
+    .then((supabase) => {
+      if (cancelled) return
+      const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+        callback(session ? toAuthUser(session.user) : null)
+      })
+      unsubscribe = () => data.subscription.unsubscribe()
+    })
+    .catch(() => {})
+  return () => {
+    cancelled = true
+    unsubscribe()
+  }
 }
 
 export async function signOut(): Promise<void> {
   if (env.useMock) return
-  const { error } = await client().auth.signOut()
+  const { error } = await (await client()).auth.signOut()
   if (error) throw toAppError(error)
 }

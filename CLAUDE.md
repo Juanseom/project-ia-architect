@@ -23,12 +23,17 @@ Vite 8 · React 19 · TypeScript 7 strict · Tailwind CSS v4 (`@tailwindcss/vite
 npm run dev | typecheck | lint | test | build
 npm run db:start | db:status | db:lint | db:reset | db:types   # requieren Docker
 npm run evidence                                                # capturas + verificación Realtime (Playwright)
+npm run analyze                                                 # reporte del bundle (ANALYZE=despues)
+node scripts/measure-performance.mjs <dist-a> <dist-b>          # FCP/LCP con 3G + CPU 4×
 ```
 
 ## Reglas de arquitectura (las hace cumplir oxlint)
 - `pages → components`; `pages → hooks/context → services → services/supabase`. `types/` y `utils/` no importan a nadie.
 - Solo `src/services/**` importa `@supabase/supabase-js`. Los tipos del SDK se traducen a dominio en services (`User` → `AuthUser`).
 - `components/**` no importa hooks, services ni context: solo props + JSX.
+- `getSupabase()` es ASÍNCRONO (SDK con import() dinámico). El mock no va en el barrel de services.
+- `App.tsx` importa sub-barrels (`./components/layout`): el barrel raíz arrastra el dashboard al chunk inicial.
+- Los tests corren en modo mock forzado (`test.env` en vite.config.ts): nunca tocan red ni Supabase.
 - Barrels: importar desde `'../hooks'`, nunca archivos internos. Cada carpeta tiene README + index.ts.
 - Servicios mapean snake_case (BD) → camelCase (dominio).
 
@@ -40,7 +45,9 @@ npm run evidence                                                # capturas + ver
 - `supabase migration new` lee SQL de stdin si está canalizado: ejecutarlo con `< /dev/null` o se queda colgado.
 
 ## Estado
-Iteraciones 0–4 completas (tags `fase-0`, `iter-1`…`iter-4`). Pendiente: `docs/ENTREGA.md` cuando Sebastian diga que cerramos.
+Lab "Spec-to-Code" cerrado (tags `fase-0`…`iter-4`, `docs/ENTREGA.md`).
+Lab 5 "Auditoría y optimización" cerrado (tag `lab5`): informe en `docs/AUDITORIA_LAB5.md`, entrega en `docs/ENTREGA_LAB5.md`,
+prompts 05–07, evidencias en `docs/evidencias/lab5/`.
 
 ## Definición de terminado
 typecheck/lint/test/build verdes · capas respetadas · barrels y READMEs al día · feedback de loading/error/vacío/éxito

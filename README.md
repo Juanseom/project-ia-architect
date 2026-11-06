@@ -63,13 +63,17 @@ Usa un servicio en memoria con datos de ejemplo y las mismas reglas de validaci�
 | `npm run db:lint` | `supabase db lint --level warning` |
 | `npm run db:types` | Regenera `src/services/supabase/database.types.ts` |
 | `npm run evidence` | Con Supabase y `npm run dev` arriba: genera capturas y verifica Realtime + RLS (Playwright) |
+| `npm run analyze` | Build con `rollup-plugin-visualizer` → `docs/evidencias/lab5/bundle-despues.{html,json}` |
+| `npm run perf -- <dist-antes> <dist-despues>` | FCP/LCP/tiempo a datos con 3G rápida + CPU 4× (Playwright) |
 
-Prueba de RLS en psql (dos usuarios y `anon`, sin dejar datos):
+Pruebas de RLS y hardening en psql (sin dejar datos):
 `docker exec -i supabase_db_ecotrack psql -U postgres < supabase/tests/rls_emisiones.sql`
+`docker exec -i supabase_db_ecotrack psql -U postgres < supabase/tests/hardening_lab5.sql`
 
 ## Arquitectura en una línea
 
-`EmissionsTracker` → `useEmissions` / `useEmissionForm` → `emissionsService` → `getSupabase()` → tabla `emisiones` (RLS) + canal Realtime.
+`EmissionsTracker` → `useEmissions` / `useEmissionForm` → `emissionsService` → `getSupabase()` (SDK cargado con `import()`) → tabla `emisiones` + vista `emisiones_resumen` (RLS) + canal Realtime.
+Rutas: `/` (dashboard, eager) y `/inventario` (módulo EcoTech, `React.lazy`); 404 perezosa.
 Solo `src/services/` importa `@supabase/supabase-js`; los componentes solo reciben props. `npm run lint` lo hace cumplir.
 Detalle y decisiones en [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -79,7 +83,11 @@ Detalle y decisiones en [ARCHITECTURE.md](ARCHITECTURE.md).
 - RLS `to authenticated` con `owner_id = (select auth.uid())`; sin políticas de update/delete.
 - `revoke all` + `grant insert (fuente, categoria, co2_kg)`: el cliente no puede fijar `owner_id` ni `medido_en`.
 - Realtime respeta RLS: un usuario no recibe inserciones de otro (verificado).
+- Límites de escritura en la BD (≤10 por solicitud, ≤30/min, ≤5000 por cuenta → HTTP 429) y resumen agregado en la BD.
+- El build falla si una variable `VITE_*` contiene una clave secreta, y `env.ts` la rechaza en ejecución.
+- CSP en el build de producción (`script-src 'self'`, `connect-src` solo al proyecto Supabase).
 - La sesión anónima es para la demo: en producción requiere CAPTCHA/Turnstile o login real.
+- Auditoría completa del Lab 5: [docs/AUDITORIA_LAB5.md](docs/AUDITORIA_LAB5.md).
 
 ## Documentación y evidencias
 
@@ -87,3 +95,4 @@ Detalle y decisiones en [ARCHITECTURE.md](ARCHITECTURE.md).
 - [ARCHITECTURE.md](ARCHITECTURE.md): capas, flujo, decisiones (ADR) y deuda técnica.
 - [docs/BITACORA_PROMPTS.md](docs/BITACORA_PROMPTS.md) y [docs/prompts/](docs/prompts/): los 4 prompts y la evolución del código.
 - [docs/evidencias/](docs/evidencias/): capturas por iteración, prueba RLS, contraste WCAG y `final/` (generadas con `npm run evidence`).
+- [docs/AUDITORIA_LAB5.md](docs/AUDITORIA_LAB5.md) y [docs/evidencias/lab5/](docs/evidencias/lab5/): auditoría de seguridad, bundle y rendimiento (Lab 5).

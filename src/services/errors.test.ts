@@ -9,6 +9,9 @@ describe('toAppError', () => {
     [{ code: '22003', message: 'numeric field overflow' }, 'validation', ERROR_MESSAGES.tooLarge],
     [{ code: '', message: 'TypeError: Failed to fetch' }, 'network', ERROR_MESSAGES.network],
     [{ name: 'AuthRetryableFetchError', message: 'fetch failed' }, 'network', ERROR_MESSAGES.network],
+    [{ code: 'PT429', hint: 'rate_limit_lote', message: 'Máximo 10 mediciones por solicitud (recibidas: 5000).' }, 'rateLimit', ERROR_MESSAGES.rateLimitBatch],
+    [{ code: 'PT429', hint: 'rate_limit_minuto', message: 'Demasiadas mediciones en el último minuto (40).' }, 'rateLimit', ERROR_MESSAGES.rateLimitMinute],
+    [{ code: 'PT429', hint: 'cuota_total', message: 'Se alcanzó el máximo de 5000 mediciones por cuenta.' }, 'rateLimit', ERROR_MESSAGES.quota],
     [{ code: 'anonymous_provider_disabled', message: 'Anonymous sign-ins are disabled' }, 'auth', ERROR_MESSAGES.anonymousDisabled],
   ])('traduce %o', (raw, kind, message) => {
     const error = toAppError(raw)

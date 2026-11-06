@@ -1,0 +1,17 @@
+Perfil: 3G rápida (150 ms RTT, 1,6 Mbps) + CPU 4×, viewport 412×915, 9 corridas, mediana
+
+Métrica                         Antes       Después     Cambio
+FCP (primer contenido)          1088 ms     848 ms      -22.1%
+LCP (mayor contenido)           1088 ms     848 ms      -22.1%
+Datos visibles (sesión+API)     1884 ms     1640 ms     -13.0%
+
+JS descargado (antes, transferido con gzip):
+  index-bOwNtEZp.js                     127.1 kB  pedido en 171 ms
+  TOTAL 127.1 kB
+
+JS descargado (despues, transferido con gzip):
+  index-BVotbmFV.js                      10.8 kB  pedido en 166 ms
+  rolldown-runtime-4tVxZq34.js            0.5 kB  pedido en 166 ms
+  vendor-react-Br0ptrPz.js               66.2 kB  pedido en 166 ms
+  vendor-supabase-Off5EfqE.js            53.8 kB  pedido en 808 ms
+  TOTAL 131.3 kB

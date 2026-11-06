@@ -1,0 +1,26 @@
+Reporte: docs/evidencias/lab5/bundle-despues.json
+
+Por paquete (código renderizado antes de minificar, % del total):
+  react-dom                     524.1 kB   53.5%   chunk: vendor-react-Br0ptrPz.js
+  @supabase/auth-js             169.7 kB   17.3%   chunk: vendor-supabase-Off5EfqE.js
+  @supabase/realtime-js          54.1 kB    5.5%   chunk: vendor-supabase-Off5EfqE.js
+  @supabase/storage-js           41.4 kB    4.2%   chunk: vendor-supabase-Off5EfqE.js
+  @supabase/phoenix              39.8 kB    4.1%   chunk: vendor-supabase-Off5EfqE.js
+  @supabase/postgrest-js         30.4 kB    3.1%   chunk: vendor-supabase-Off5EfqE.js
+  src/components                 22.0 kB    2.3%   chunk: index-BVotbmFV.js
+  @supabase/supabase-js          20.4 kB    2.1%   chunk: vendor-supabase-Off5EfqE.js
+  react                          16.8 kB    1.7%   chunk: vendor-react-Br0ptrPz.js
+  src/services                   11.5 kB    1.2%   chunk: index-BVotbmFV.js, emissions.mock-BYvzhOtW.js
+  scheduler                       9.0 kB    0.9%   chunk: vendor-react-Br0ptrPz.js
+  iceberg-js                      7.8 kB    0.8%   chunk: vendor-supabase-Off5EfqE.js
+  src/hooks                       7.0 kB    0.7%   chunk: index-BVotbmFV.js
+  @supabase/functions-js          5.6 kB    0.6%   chunk: vendor-supabase-Off5EfqE.js
+
+Por chunk:
+  assets/vendor-react-Br0ptrPz.js           549.9 kB
+  assets/vendor-supabase-Off5EfqE.js        370.2 kB
+  assets/index-BVotbmFV.js                   53.6 kB
+  assets/InventoryPage-DnlIBhxk.js            2.2 kB
+  assets/emissions.mock-BYvzhOtW.js           1.8 kB
+  assets/NotFoundPage-BdDLDFlK.js             0.9 kB
+  assets/rolldown-runtime-4tVxZq34.js         0.4 kB

@@ -1,4 +1,5 @@
 import type { NewProduct, Product, ProductCategory } from '../types'
+import { toAppError } from './errors'
 import { getSupabase, type Database } from './supabase'
 
 type ProductRow = Database['public']['Tables']['products']['Row']
@@ -22,16 +23,16 @@ const toProduct = (row: ProductRow): Product => ({
 })
 
 export async function getProducts(): Promise<Product[]> {
-  const { data, error } = await getSupabase()
+  const { data, error } = await (await getSupabase())
     .from('products')
     .select('*')
     .order('created_at', { ascending: false })
-  if (error) throw new Error(error.message)
+  if (error) throw toAppError(error)
   return data.map(toProduct)
 }
 
 export async function createProduct(input: NewProduct): Promise<Product> {
-  const { data, error } = await getSupabase()
+  const { data, error } = await (await getSupabase())
     .from('products')
     .insert({
       name: input.name,
@@ -42,11 +43,11 @@ export async function createProduct(input: NewProduct): Promise<Product> {
     })
     .select()
     .single()
-  if (error) throw new Error(error.message)
+  if (error) throw toAppError(error)
   return toProduct(data)
 }
 
 export async function deleteProduct(id: string): Promise<void> {
-  const { error } = await getSupabase().from('products').delete().eq('id', id)
-  if (error) throw new Error(error.message)
+  const { error } = await (await getSupabase()).from('products').delete().eq('id', id)
+  if (error) throw toAppError(error)
 }

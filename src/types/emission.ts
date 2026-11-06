@@ -15,6 +15,16 @@ export interface Emission {
   measuredAt: string
 }
 
+/** Cuántas mediciones recientes descarga el dashboard (el total y el desglose los calcula la BD). */
+export const EMISSIONS_PAGE_SIZE = 50
+
+/** Total de CO₂ (kg), desglose por categoría y número de mediciones del usuario. */
+export interface EmissionsTotals {
+  totalKg: number
+  byCategory: Record<EmissionCategory, number>
+  count: number
+}
+
 /** Lo que el usuario puede enviar: id, fecha y dueño los pone la BD. */
 export type NewEmission = Pick<Emission, 'source' | 'category' | 'co2Kg'>
 

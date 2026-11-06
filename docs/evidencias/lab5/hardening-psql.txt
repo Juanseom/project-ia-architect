@@ -1,0 +1,30 @@
+== H1.1 Privilegios de anon sobre products y emisiones_resumen (esperado: ninguno)
+ privilegios_anon 
+ (ninguno)
+== H1.2 SKU repetido entre usuarios distintos: ya no es oráculo (esperado: 2 filas, una por dueño)
+ filas_con_ese_sku 
+                 2
+== H1.3 B intenta fijar created_at u owner_id (esperado: permission denied)
+ERROR:  permission denied for table products
+HINT:  Grant the required privileges to the current role with: GRANT INSERT ON public.products TO authenticated;
+ERROR:  permission denied for table products
+HINT:  Grant the required privileges to the current role with: GRANT UPDATE ON public.products TO authenticated;
+== H2.1 Lote de 11 filas en una sentencia (esperado: PT429 rate_limit_lote)
+ERROR:  Máximo 10 mediciones por solicitud (recibidas: 11).
+HINT:  rate_limit_lote
+CONTEXT:  PL/pgSQL function public.limitar_escrituras_emisiones() line 9 at RAISE
+== H2.2 Cuatro lotes de 10 en el mismo minuto (esperado: 3 OK y el 4.º PT429 rate_limit_minuto)
+ERROR:  Demasiadas mediciones en el último minuto (40).
+HINT:  rate_limit_minuto
+CONTEXT:  PL/pgSQL function public.limitar_escrituras_emisiones() line 18 at RAISE
+== H2.3 Resumen calculado en la BD para B (esperado: 3 categorías, 30 mediciones, 40 kg)
+ categoria  | mediciones | co2_kg 
+------------+------------+--------
+ transporte |         10 |   5.00
+ energia    |         10 |  10.00
+ residuos   |         10 |  25.00
+== H2.4 A consulta el resumen: RLS vía security_invoker (esperado: 0 filas)
+ filas_de_resumen_visibles_para_a 
+                                0
+== H2.5 anon consulta el resumen (esperado: permission denied)
+ERROR:  permission denied for view emisiones_resumen

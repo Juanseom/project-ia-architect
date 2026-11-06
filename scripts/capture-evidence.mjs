@@ -7,7 +7,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { chromium, devices } from 'playwright'
 
 const BASE_URL = process.argv[2] ?? 'http://localhost:5173'
-const OUT = 'docs/evidencias/final'
+const OUT = process.argv[3] ?? 'docs/evidencias/final'
 const log = []
 const say = (line) => {
   console.log(line)

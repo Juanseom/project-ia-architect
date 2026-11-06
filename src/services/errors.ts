@@ -1,7 +1,7 @@
 // Traducción de errores técnicos (PostgrestError, AuthError, fallos de red, configuración)
 // a un error de dominio con mensaje en español. La UI nunca muestra el error crudo de Postgres.
 
-export type AppErrorKind = 'config' | 'auth' | 'permission' | 'validation' | 'network' | 'unknown'
+export type AppErrorKind = 'config' | 'auth' | 'permission' | 'validation' | 'rateLimit' | 'network' | 'unknown'
 
 export class AppError extends Error {
   readonly kind: AppErrorKind
@@ -21,6 +21,9 @@ export const ERROR_MESSAGES = {
   checkViolation: 'Algún dato no cumple las reglas: la fuente debe tener entre 2 y 100 caracteres y el CO₂ debe ser mayor que 0.',
   invalidValue: 'Hay un valor con formato inválido. Revisa la categoría y el valor de CO₂.',
   tooLarge: 'El valor de CO₂ es demasiado grande (máximo 9.999.999.999,99 kg).',
+  rateLimitBatch: 'Solo se pueden enviar hasta 10 mediciones por solicitud.',
+  rateLimitMinute: 'Estás registrando mediciones muy rápido. Espera un minuto e inténtalo de nuevo.',
+  quota: 'Tu cuenta alcanzó el máximo de 5000 mediciones.',
   unknown: 'Ocurrió un error inesperado. Inténtalo de nuevo.',
 } as const
 
@@ -39,6 +42,7 @@ export function toAppError(error: unknown): AppError {
   const code = readString(error, 'code')
   const name = readString(error, 'name')
   const message = readString(error, 'message')
+  const hint = readString(error, 'hint')
 
   if (name === 'AuthRetryableFetchError' || NETWORK_PATTERN.test(message)) {
     return new AppError('network', ERROR_MESSAGES.network, { cause: error })
@@ -57,6 +61,10 @@ export function toAppError(error: unknown): AppError {
       return new AppError('validation', ERROR_MESSAGES.checkViolation, { cause: error })
     case '22P02': // invalid_text_representation (ej. valor fuera del ENUM)
       return new AppError('validation', ERROR_MESSAGES.invalidValue, { cause: error })
+    case 'PT429': // límite de escritura del trigger emisiones_limitar_escrituras (PostgREST → HTTP 429)
+      if (hint === 'rate_limit_lote') return new AppError('rateLimit', ERROR_MESSAGES.rateLimitBatch, { cause: error })
+      if (hint === 'cuota_total') return new AppError('rateLimit', ERROR_MESSAGES.quota, { cause: error })
+      return new AppError('rateLimit', ERROR_MESSAGES.rateLimitMinute, { cause: error })
     case '22003': // numeric_value_out_of_range
       return new AppError('validation', ERROR_MESSAGES.tooLarge, { cause: error })
     default:

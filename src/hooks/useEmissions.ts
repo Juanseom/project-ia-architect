@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { emissionsService, getErrorMessage, type EmissionsService } from '../services'
-import type { Emission, NewEmission, RealtimeStatus } from '../types'
-import { summarizeEmissions, type EmissionsTotals } from '../utils'
+import type { Emission, EmissionsTotals, NewEmission, RealtimeStatus } from '../types'
+import { addToTotals } from '../utils'
 import { useAuth } from './useAuth'
 
 /** Estado del listado como unión discriminada: `emissions` solo existe cuando hay datos. */
@@ -13,7 +13,7 @@ export type EmissionsState =
 
 export interface UseEmissionsResult {
   state: EmissionsState
-  /** Total y desglose; null mientras carga o si falló (para no mostrar ceros falsos). */
+  /** Total, desglose y conteo de TODAS las mediciones (calculado en la BD); null mientras carga o si falló. */
   summary: EmissionsTotals | null
   /** false si no hay sesión lista: el formulario se deshabilita. */
   canSubmit: boolean
@@ -30,6 +30,7 @@ export interface UseEmissionsResult {
 interface LoadResult {
   key: string
   emissions: readonly Emission[]
+  totals: EmissionsTotals | null
   error: string | null
 }
 
@@ -41,7 +42,12 @@ const EMPTY: readonly Emission[] = []
  */
 const withEmission = (prev: LoadResult | null, emission: Emission): LoadResult | null => {
   if (prev === null || prev.emissions.some((e) => e.id === emission.id)) return prev
-  return { ...prev, emissions: [emission, ...prev.emissions] }
+  return {
+    ...prev,
+    emissions: [emission, ...prev.emissions],
+    // El resumen viene de la BD; las inserciones nuevas se suman localmente sin volver a consultarlo.
+    totals: prev.totals && addToTotals(prev.totals, emission),
+  }
 }
 
 /**
@@ -76,13 +82,13 @@ export function useEmissions(service: EmissionsService = emissionsService): UseE
   useEffect(() => {
     if (requestKey === null) return
     let active = true
-    service
-      .list()
-      .then((emissions) => {
-        if (active) setResult({ key: requestKey, emissions, error: null })
+    // Lista (últimas N) y resumen (todas, agregadas en la BD) en paralelo.
+    Promise.all([service.list(), service.summary()])
+      .then(([emissions, totals]) => {
+        if (active) setResult({ key: requestKey, emissions, totals, error: null })
       })
       .catch((e: unknown) => {
-        if (active) setResult({ key: requestKey, emissions: EMPTY, error: getErrorMessage(e) })
+        if (active) setResult({ key: requestKey, emissions: EMPTY, totals: null, error: getErrorMessage(e) })
       })
     return () => {
       active = false
@@ -94,6 +100,7 @@ export function useEmissions(service: EmissionsService = emissionsService): UseE
     if (userId === null) return
     let active = true
     const unsubscribe = service.subscribeToInserts(
+      userId,
       (emission) => {
         if (active) setResult((prev) => withEmission(prev, emission))
       },
@@ -149,12 +156,8 @@ export function useEmissions(service: EmissionsService = emissionsService): UseE
     return { status: 'success', emissions: current.emissions }
   }, [authError, current])
 
-  // Memo: summarizeEmissions recorre toda la lista; sin memo se recalculaba en cada tecleo del formulario.
-  const emissionsForSummary = state.status === 'success' ? state.emissions : state.status === 'empty' ? EMPTY : null
-  const summary = useMemo(
-    () => (emissionsForSummary === null ? null : summarizeEmissions(emissionsForSummary)),
-    [emissionsForSummary],
-  )
+  // El resumen solo se muestra si la carga fue exitosa (nunca ceros falsos mientras carga o con error).
+  const summary = state.status === 'success' || state.status === 'empty' ? (current?.totals ?? null) : null
 
   return {
     state,

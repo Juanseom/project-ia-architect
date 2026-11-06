@@ -1,44 +1,72 @@
 import { useCallback, useEffect, useState } from 'react'
-import { inventoryService } from '../services'
-import type { AsyncState, NewProduct, Product } from '../types'
+import { getErrorMessage, inventoryService } from '../services'
+import type { Product } from '../types'
+import { useAuth } from './useAuth'
 
-// Lógica de negocio del inventario: estado, carga y mutaciones. La UI solo consume.
-export function useProducts() {
-  const [state, setState] = useState<AsyncState<Product[]>>({ data: [], loading: true, error: null })
+export interface UseProductsResult {
+  products: readonly Product[]
+  loading: boolean
+  /** Error de carga ya traducido (o null). */
+  error: string | null
+  /** Error de la última acción (eliminar), sin reemplazar el listado. */
+  actionError: string | null
+  reload: () => void
+  removeProduct: (id: string) => Promise<void>
+}
 
-  const load = useCallback(async () => {
-    try {
-      setState({ data: await inventoryService.getProducts(), loading: false, error: null })
-    } catch (e) {
-      setState((s) => ({ ...s, loading: false, error: (e as Error).message }))
-    }
-  }, [])
+interface LoadResult {
+  key: string
+  products: readonly Product[]
+  error: string | null
+}
 
-  const refresh = useCallback(async () => {
-    setState((s) => ({ ...s, loading: true, error: null }))
-    await load()
-  }, [load])
-
-  const addProduct = useCallback(async (input: NewProduct) => {
-    const created = await inventoryService.createProduct(input)
-    setState((s) => ({ ...s, data: [created, ...s.data] }))
-  }, [])
-
-  const removeProduct = useCallback(async (id: string) => {
-    await inventoryService.deleteProduct(id)
-    setState((s) => ({ ...s, data: s.data.filter((p) => p.id !== id) }))
-  }, [])
+/**
+ * Lógica del inventario (dominio EcoTech). Lab 5: antes consultaba sin esperar la sesión (RLS devolvía 0 filas),
+ * mostraba el mensaje crudo de Postgres y no manejaba errores al eliminar. Ahora sigue el patrón de useEmissions.
+ */
+export function useProducts(): UseProductsResult {
+  const auth = useAuth()
+  const userId = auth.status === 'ready' ? auth.user.id : null
+  const [reloadToken, setReloadToken] = useState(0)
+  const [result, setResult] = useState<LoadResult | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const requestKey = userId === null ? null : `${userId}:${reloadToken}`
 
   useEffect(() => {
-    let ignore = false
+    if (requestKey === null) return
+    let active = true
     inventoryService
       .getProducts()
-      .then((data) => !ignore && setState({ data, loading: false, error: null }))
-      .catch((e: Error) => !ignore && setState((s) => ({ ...s, loading: false, error: e.message })))
+      .then((products) => {
+        if (active) setResult({ key: requestKey, products, error: null })
+      })
+      .catch((e: unknown) => {
+        if (active) setResult({ key: requestKey, products: [], error: getErrorMessage(e) })
+      })
     return () => {
-      ignore = true
+      active = false
+    }
+  }, [requestKey])
+
+  const reload = useCallback(() => setReloadToken((n) => n + 1), [])
+
+  const removeProduct = useCallback(async (id: string) => {
+    setActionError(null)
+    try {
+      await inventoryService.deleteProduct(id)
+      setResult((prev) => prev && { ...prev, products: prev.products.filter((p) => p.id !== id) })
+    } catch (e: unknown) {
+      setActionError(getErrorMessage(e))
     }
   }, [])
 
-  return { ...state, refresh, addProduct, removeProduct }
+  const current = result !== null && result.key === requestKey ? result : null
+  return {
+    products: current?.products ?? [],
+    loading: auth.status === 'loading' || (requestKey !== null && current === null),
+    error: auth.status === 'error' ? auth.error : (current?.error ?? null),
+    actionError,
+    reload,
+    removeProduct,
+  }
 }

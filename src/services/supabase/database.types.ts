@@ -54,7 +54,15 @@ export type Database = {
                 }
           }
           Views: {
-            [_ in never]: never
+            "emisiones_resumen": {
+                  Row: {
+                    "categoria": Database["public"]['Enums']["categoria_emision"],"co2_kg": number | null,"mediciones": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
+                }
           }
           Functions: {
             [_ in never]: never

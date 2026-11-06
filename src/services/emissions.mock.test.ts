@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createMockEmissionsService } from './emissions.mock'
+import { EMISSIONS_PAGE_SIZE } from '../types'
 import { AppError } from './errors'
 
 describe('createMockEmissionsService', () => {
@@ -23,4 +24,14 @@ describe('createMockEmissionsService', () => {
     await expect(service.create({ source: 'Caldera', category: 'energia', co2Kg: 0 })).rejects.toMatchObject({ kind: 'validation' })
     await expect(service.create({ source: 'Caldera', category: 'energia', co2Kg: Number.NaN })).rejects.toMatchObject({ kind: 'validation' })
   })
+
+  it('pagina la lista (EMISSIONS_PAGE_SIZE) pero el resumen cuenta todas las filas', async () => {
+    const seed = Array.from({ length: 70 }, (_, i) => ({
+      id: `s${i}`, source: `Fuente ${i}`, category: 'residuos' as const, co2Kg: 1, measuredAt: new Date(2026, 0, 1, 0, i).toISOString(),
+    }))
+    const service = createMockEmissionsService({ latencyMs: 0, seed })
+    expect(await service.list()).toHaveLength(EMISSIONS_PAGE_SIZE)
+    expect(await service.summary()).toMatchObject({ totalKg: 70, count: 70 })
+  })
 })
+

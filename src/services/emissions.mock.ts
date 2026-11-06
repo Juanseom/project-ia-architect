@@ -1,4 +1,5 @@
-import type { Emission, NewEmission, RealtimeStatus } from '../types'
+import { EMISSIONS_PAGE_SIZE, type Emission, type NewEmission, type RealtimeStatus } from '../types'
+import { summarizeEmissions } from '../utils'
 import type { EmissionsService } from './emissions.service'
 import { AppError, ERROR_MESSAGES } from './errors'
 
@@ -29,7 +30,12 @@ export function createMockEmissionsService({ latencyMs = 600, seed = MOCK_SEED }
   return {
     async list() {
       await wait()
-      return [...rows].sort((a, b) => b.measuredAt.localeCompare(a.measuredAt))
+      return [...rows].sort((a, b) => b.measuredAt.localeCompare(a.measuredAt)).slice(0, EMISSIONS_PAGE_SIZE)
+    },
+
+    async summary() {
+      await wait()
+      return summarizeEmissions(rows)
     },
 
     async create(input: NewEmission) {
@@ -51,7 +57,7 @@ export function createMockEmissionsService({ latencyMs = 600, seed = MOCK_SEED }
       return created
     },
 
-    subscribeToInserts(onInsert: (emission: Emission) => void, onStatus: (status: RealtimeStatus) => void) {
+    subscribeToInserts(_ownerId: string, onInsert: (emission: Emission) => void, onStatus: (status: RealtimeStatus) => void) {
       listeners.add(onInsert)
       queueMicrotask(() => onStatus('live'))
       return () => {

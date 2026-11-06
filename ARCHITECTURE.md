@@ -80,7 +80,9 @@ EmissionsTracker (pages)
   limpiados se descartan (StrictMode, reload rápido).
 - **Inserción propia + eco Realtime:** ambos pasan por `withEmission`, que deduplica por `id`; el orden de llegada no importa.
 - **Limpieza:** el servicio devuelve la función que hace `removeChannel`; el hook la llama al desmontar o cambiar de usuario.
-- **Estado para la UI:** unión discriminada `loading | error | empty | success`; `summary` memoizado y `null` sin datos fiables.
+- **Estado para la UI:** unión discriminada `loading | error | empty | success`; `summary` viene de la BD y es `null` sin datos fiables.
+- **Rutas (Lab 5):** `src/routes.ts` + `src/router/` (History API). `/` eager; `/inventario` y 404 con `React.lazy`.
+- **Chunks (Lab 5):** `index` (app) · `vendor-react` · `vendor-supabase` (dinámico) · páginas secundarias · `emissions.mock` (solo demo).
 
 ## 6. Decisiones (ADR resumidos)
 
@@ -100,6 +102,12 @@ EmissionsTracker (pages)
 | D12 | Los errores del formulario se muestran al intentar enviar, no en el blur. | El mensaje que aparecía en el blur desplazaba el botón y el click se perdía (medido en navegador). |
 | D13 | `React.memo` en tarjetas/lista/resumen/form + `useMemo` del estado y el resumen. | Escribir 10 caracteres re-renderizaba 200 tarjetas; ahora 0 (test). |
 | D14 | El payload de Realtime se valida en ejecución (`parseEmissionRow`). | Llega como `Record<string, any>`; un cast escondería datos inválidos. |
+| D15 | (Lab 5) El SDK de Supabase se carga con `import()` dinámico; `getSupabase()` es asíncrono. | Sale de la ruta crítica: JS inicial 127 → 77,5 kB gzip, FCP/LCP −22 %. |
+| D16 | (Lab 5) Ruta `/` eager; rutas secundarias con `React.lazy` + `Suspense` + `ErrorBoundary`; router propio. | Medido: hacer perezosa la ruta de aterrizaje no mejoraba el LCP; react-router sumaría peso. |
+| D17 | (Lab 5) Totales en la vista `emisiones_resumen` (security_invoker) y lista paginada a 50. | `max_rows=1000` truncaba la lista y el KPI mostraba 1.000 kg con 30.000 reales. |
+| D18 | (Lab 5) Límites de escritura en un trigger por sentencia con `PT429`. | La UI no es barrera: cualquiera llama a PostgREST con la anon key. |
+| D19 | (Lab 5) Guard de secretos en build (`tooling/vite-security.ts`) y en ejecución (`env.ts`), CSP en build. | Un `service_role` en `VITE_*` se publicaba sin aviso. |
+| D20 | (Lab 5) El mock no se re-exporta en el barrel de services; se carga solo en modo demo. | Viajaba con sus datos semilla en el bundle de producción. |
 
 ## 7. Deuda técnica conocida (heredada de EcoTech)
 

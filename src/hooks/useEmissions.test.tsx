@@ -2,7 +2,8 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { AuthContext, type AuthContextValue } from '../context'
-import { AppError, createMockEmissionsService, ERROR_MESSAGES, type EmissionsService } from '../services'
+import { AppError, ERROR_MESSAGES, type EmissionsService } from '../services'
+import { createMockEmissionsService } from '../services/emissions.mock'
 import type { Emission, RealtimeStatus } from '../types'
 import { useEmissions } from './useEmissions'
 
@@ -33,7 +34,7 @@ describe('useEmissions', () => {
 
     await waitFor(() => expect(result.current.state.status).toBe('success'))
     expect(result.current.state).toMatchObject({ status: 'success', emissions: SEED })
-    expect(result.current.summary).toEqual({ totalKg: 150.5, byCategory: { transporte: 100, energia: 50.5, residuos: 0 } })
+    expect(result.current.summary).toEqual({ totalKg: 150.5, byCategory: { transporte: 100, energia: 50.5, residuos: 0 }, count: 2 })
     expect(result.current.canSubmit).toBe(true)
   })
 
@@ -150,8 +151,9 @@ function createControllableService(seed: Emission[]) {
   })
   const service: EmissionsService = {
     list: mock.list,
+    summary: mock.summary,
     create: mock.create,
-    subscribeToInserts: (onInsert, onStatus) => {
+    subscribeToInserts: (_ownerId, onInsert, onStatus) => {
       listener = onInsert
       statusListener = onStatus
       return unsubscribe
@@ -181,6 +183,7 @@ describe('useEmissions — tiempo real', () => {
     const state = result.current.state
     expect(state.status === 'success' && state.emissions.map((e) => e.id)).toEqual(['remote-1', '1', '2'])
     expect(result.current.summary?.byCategory.energia).toBe(92.5)
+    expect(result.current.summary?.count).toBe(3)
   })
 
   it('no duplica si el mismo evento llega dos veces', async () => {
@@ -237,6 +240,44 @@ describe('useEmissions — tiempo real', () => {
       wrapper: wrapperWith({ status: 'loading', retry: () => {}, signOut: async () => {} }),
     })
     expect(subscribe).not.toHaveBeenCalled()
+  })
+})
+
+describe('useEmissions — Lab 5', () => {
+  it('el resumen viene del servicio (BD), no de sumar la lista paginada', async () => {
+    const mock = createMockEmissionsService({ latencyMs: 0, seed: SEED })
+    const service: EmissionsService = {
+      ...mock,
+      // Simula 30.000 filas en la BD aunque la lista solo traiga las 2 más recientes.
+      summary: async () => ({ totalKg: 30000, byCategory: { transporte: 0, energia: 30000, residuos: 0 }, count: 30000 }),
+    }
+    const { result } = renderHook(() => useEmissions(service), { wrapper: wrapperWith(READY) })
+    await waitFor(() => expect(result.current.state.status).toBe('success'))
+    expect(result.current.summary?.totalKg).toBe(30000)
+    expect(result.current.summary?.count).toBe(30000)
+  })
+
+  it('traduce el límite de escritura (PT429) y conserva el listado', async () => {
+    const mock = createMockEmissionsService({ latencyMs: 0, seed: SEED })
+    const service: EmissionsService = {
+      ...mock,
+      create: () => Promise.reject({ code: 'PT429', hint: 'rate_limit_minuto', message: 'Demasiadas mediciones en el último minuto (40).' }),
+    }
+    const { result } = renderHook(() => useEmissions(service), { wrapper: wrapperWith(READY) })
+    await waitFor(() => expect(result.current.state.status).toBe('success'))
+    await act(async () => {
+      await result.current.addEmission({ source: 'Caldera', category: 'energia', co2Kg: 1 })
+    })
+    expect(result.current.submitError).toBe(ERROR_MESSAGES.rateLimitMinute)
+    expect(result.current.state.status).toBe('success')
+  })
+
+  it('se suscribe a Realtime con el id del usuario actual (filtro owner_id)', async () => {
+    const mock = createMockEmissionsService({ latencyMs: 0, seed: SEED })
+    const subscribe = vi.spyOn(mock, 'subscribeToInserts')
+    renderHook(() => useEmissions(mock), { wrapper: wrapperWith(READY) })
+    await waitFor(() => expect(subscribe).toHaveBeenCalled())
+    expect(subscribe.mock.calls[0]?.[0]).toBe('user-a')
   })
 })
 

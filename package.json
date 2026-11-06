@@ -17,7 +17,9 @@
     "db:reset": "supabase db reset",
     "db:lint": "supabase db lint --level warning",
     "db:types": "supabase gen types typescript --local > src/services/supabase/database.types.ts",
-    "evidence": "node scripts/capture-evidence.mjs"
+    "evidence": "node scripts/capture-evidence.mjs",
+    "analyze": "ANALYZE=despues vite build",
+    "perf": "node scripts/measure-performance.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
@@ -37,6 +39,7 @@
     "jsdom": "^31.0.0",
     "oxlint": "^1.89.0",
     "playwright": "^1.64.1",
+    "rollup-plugin-visualizer": "^7.1.1",
     "supabase": "^2.122.1",
     "tailwindcss": "^4.3.4",
     "typescript": "~7.0.2",

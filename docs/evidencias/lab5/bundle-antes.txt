@@ -1,0 +1,20 @@
+Reporte: docs/evidencias/lab5/bundle-antes.json
+
+Por paquete (código renderizado antes de minificar, % del total):
+  react-dom                     524.1 kB   54.6%   chunk: index-bOwNtEZp.js
+  @supabase/auth-js             169.7 kB   17.7%   chunk: index-bOwNtEZp.js
+  @supabase/realtime-js          54.1 kB    5.6%   chunk: index-bOwNtEZp.js
+  @supabase/storage-js           41.4 kB    4.3%   chunk: index-bOwNtEZp.js
+  @supabase/phoenix              39.8 kB    4.1%   chunk: index-bOwNtEZp.js
+  @supabase/postgrest-js         30.4 kB    3.2%   chunk: index-bOwNtEZp.js
+  @supabase/supabase-js          20.3 kB    2.1%   chunk: index-bOwNtEZp.js
+  react                          16.8 kB    1.7%   chunk: index-bOwNtEZp.js
+  src/components                 16.4 kB    1.7%   chunk: index-bOwNtEZp.js
+  scheduler                       9.0 kB    0.9%   chunk: index-bOwNtEZp.js
+  src/services                    8.1 kB    0.8%   chunk: index-bOwNtEZp.js
+  iceberg-js                      7.8 kB    0.8%   chunk: index-bOwNtEZp.js
+  @supabase/functions-js          5.6 kB    0.6%   chunk: index-bOwNtEZp.js
+  src/hooks                       5.5 kB    0.6%   chunk: index-bOwNtEZp.js
+
+Por chunk:
+  assets/index-bOwNtEZp.js                  959.3 kB

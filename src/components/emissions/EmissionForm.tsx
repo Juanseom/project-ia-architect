@@ -8,10 +8,12 @@ export interface EmissionFormProps {
   onChange: <K extends keyof EmissionFormValues>(field: K, value: EmissionFormValues[K]) => void
   onSubmit: () => void
   isSubmitting: boolean
+  /** Error del último envío, ya traducido. */
+  submitError?: string | null
 }
 
 /** Formulario controlado: no guarda estado propio; valores y eventos vienen por props. */
-export function EmissionForm({ values, onChange, onSubmit, isSubmitting }: EmissionFormProps) {
+export function EmissionForm({ values, onChange, onSubmit, isSubmitting, submitError = null }: EmissionFormProps) {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     onSubmit()
@@ -58,6 +60,8 @@ export function EmissionForm({ values, onChange, onSubmit, isSubmitting }: Emiss
           className="mt-1 w-full rounded-lg border border-ink-500/30 px-3 py-2"
         />
       </div>
+
+      {submitError && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{submitError}</p>}
 
       <Button type="submit" disabled={isSubmitting} className="w-full">
         {isSubmitting ? 'Guardando…' : 'Agregar medición'}

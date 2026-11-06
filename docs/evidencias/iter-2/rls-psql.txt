@@ -1,0 +1,34 @@
+== 1. Usuario A inserta 2 mediciones (sin enviar owner_id)
+  fuente  | categoria  | co2_kg | owner_es_a 
+----------+------------+--------+------------
+ Flota A  | transporte | 120.50 | t
+ Planta A | energia    | 300.00 | t
+== 2. Usuario B lista: debe ver 0 filas
+ filas_visibles_para_b 
+                     0
+== 3. Usuario B intenta suplantar a A fijando owner_id: debe fallar (sin privilegio de columna)
+ERROR:  permission denied for table emisiones
+HINT:  Grant the required privileges to the current role with: GRANT INSERT ON public.emisiones TO authenticated;
+== 3b. Defensa en profundidad: aunque se concediera INSERT sobre owner_id, RLS bloquea la suplantación
+ERROR:  new row violates row-level security policy for table "emisiones"
+== 4. Usuario B intenta fijar medido_en (fecha retroactiva): debe fallar
+ERROR:  permission denied for table emisiones
+HINT:  Grant the required privileges to the current role with: GRANT INSERT ON public.emisiones TO authenticated;
+== 5. Usuario B intenta actualizar y borrar: no tiene privilegio
+ERROR:  permission denied for table emisiones
+HINT:  Grant the required privileges to the current role with: GRANT UPDATE ON public.emisiones TO authenticated;
+ERROR:  permission denied for table emisiones
+HINT:  Grant the required privileges to the current role with: GRANT DELETE ON public.emisiones TO authenticated;
+== 6. CHECK constraints: CO2 <= 0 y fuente de 1 caracter
+ERROR:  new row for relation "emisiones" violates check constraint "emisiones_co2_kg_check"
+ERROR:  new row for relation "emisiones" violates check constraint "emisiones_fuente_check"
+== 7. Sin owner real: un JWT sin sub no puede insertar (owner_id = auth.uid() es null)
+ERROR:  new row violates row-level security policy for table "emisiones"
+== 8. Rol anon: no puede leer ni insertar
+ERROR:  permission denied for table emisiones
+HINT:  Grant the required privileges to the current role with: GRANT SELECT ON public.emisiones TO anon;
+ERROR:  permission denied for table emisiones
+HINT:  Grant the required privileges to the current role with: GRANT INSERT ON public.emisiones TO anon;
+== 9. Usuario A vuelve a listar: sigue viendo solo sus 2 filas
+ filas_visibles_para_a 
+                     2

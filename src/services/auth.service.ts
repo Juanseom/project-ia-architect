@@ -1,20 +1,58 @@
-import type { Session } from '@supabase/supabase-js'
+import type { User } from '@supabase/supabase-js'
+import { env } from '../config'
+import type { AuthUser } from '../types'
+import { AppError, toAppError } from './errors'
+import { getSupabase } from './supabase'
 
-// Alias para que capas superiores no importen el SDK de Supabase.
-export type AuthSession = Session
-import { supabase } from './supabase'
+const MOCK_USER: AuthUser = { id: '00000000-0000-4000-8000-000000000000', isAnonymous: true }
 
-export async function getSession(): Promise<Session | null> {
-  const { data } = await supabase.auth.getSession()
-  return data.session
+const toAuthUser = (user: User): AuthUser => ({ id: user.id, isAnonymous: user.is_anonymous ?? false })
+
+function client() {
+  try {
+    return getSupabase()
+  } catch (error) {
+    throw new AppError('config', error instanceof Error ? error.message : String(error), { cause: error })
+  }
 }
 
-export function onAuthChange(callback: (session: Session | null) => void): () => void {
-  const { data } = supabase.auth.onAuthStateChange((_event, session) => callback(session))
+// Promesa en vuelo compartida: en StrictMode el efecto se ejecuta dos veces y, sin esto,
+// se crearían dos usuarios anónimos distintos.
+let pending: Promise<AuthUser> | null = null
+
+async function resolveUser(): Promise<AuthUser> {
+  if (env.useMock) return MOCK_USER
+  const supabase = client()
+
+  const { data, error } = await supabase.auth.getSession()
+  if (error) throw toAppError(error)
+  if (data.session) return toAuthUser(data.session.user)
+
+  const { data: signIn, error: signInError } = await supabase.auth.signInAnonymously()
+  if (signInError) throw toAppError(signInError)
+  if (!signIn.user) throw new AppError('auth', 'No se pudo iniciar la sesión de invitado.')
+  return toAuthUser(signIn.user)
+}
+
+/** Devuelve el usuario actual; si no hay sesión, inicia una anónima. */
+export function ensureUser(): Promise<AuthUser> {
+  pending ??= resolveUser().finally(() => {
+    pending = null
+  })
+  return pending
+}
+
+/** Notifica cambios de sesión. Devuelve la función para cancelar la suscripción. */
+export function onAuthChange(callback: (user: AuthUser | null) => void): () => void {
+  if (env.useMock) return () => {}
+  const { data } = client().auth.onAuthStateChange((_event, session) => {
+    callback(session ? toAuthUser(session.user) : null)
+  })
   return () => data.subscription.unsubscribe()
 }
 
 export async function signOut(): Promise<void> {
-  const { error } = await supabase.auth.signOut()
-  if (error) throw new Error(error.message)
+  if (env.useMock) return
+  const { error } = await client().auth.signOut()
+  if (error) throw toAppError(error)
 }

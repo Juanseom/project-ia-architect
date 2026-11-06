@@ -12,8 +12,8 @@ y, cuando aplica, `npm run db:lint` + pruebas RLS en psql.
 | Iteración | Prompt | Tag | Commit |
 |---|---|---|---|
 | 0 — Setup y plano | (sin prompt de código; ver abajo) | `fase-0` | `2aa27c8` |
-| 1 — Estructura | `docs/prompts/01-estructura.md` | `iter-1` | _ver `git rev-parse iter-1`; se anota en la iteración 2_ |
-| 2 — Lógica | `docs/prompts/02-logica.md` | `iter-2` | |
+| 1 — Estructura | `docs/prompts/01-estructura.md` | `iter-1` | `f1d4c25` |
+| 2 — Lógica | `docs/prompts/02-logica.md` | `iter-2` | _se anota en la iteración 3_ |
 | 3 — Refinamiento | `docs/prompts/03-refinamiento.md` | `iter-3` | |
 | 4 — Tiempo real y cierre | `docs/prompts/04-realtime-cierre.md` | `iter-4` | |
 
@@ -118,7 +118,89 @@ Los puntos 2–5 son intencionalmente del alcance de las Iteraciones 2 y 3 (el p
 
 ## Iteración 2 — Lógica
 
-_Pendiente._
+**Prompt literal:** [`docs/prompts/02-logica.md`](prompts/02-logica.md) (aprobado sin cambios). Nace de los hallazgos 1 y 2 de la Iteración 1.
+
+**Objetivo:** base de datos real con RLS, servicio (Supabase + mock), `useEmissions` robusto y la página conectada.
+
+**Qué generó**
+```
+supabase/migrations/20261106004006_crear_emisiones.sql   ENUM, tabla, índice, revoke all + grants por columna, RLS select/insert
+supabase/tests/rls_emisiones.sql                         prueba RLS reproducible (transacción + ROLLBACK)
+src/config/env.ts                                        ya no lanza al importar; getSupabaseConfig() valida bajo demanda
+src/services/supabase/client.ts                          getSupabase(): singleton perezoso, nunca se crea en modo mock
+src/services/errors.ts                                   AppError + toAppError (42501, 23514/23502, 22P02, 22003, PGRST301, red, anon deshabilitado)
+src/services/emissions.service.ts / emissions.mock.ts    interfaz EmissionsService + impl. Supabase + impl. mock con reglas del CHECK
+src/services/auth.service.ts + context/AuthProvider.tsx  ensureUser() con signInAnonymously; estado 'loading' | 'ready' | 'error' (unión discriminada)
+src/hooks/useEmissions.ts                                emissions, loading, error, isSubmitting, submitError, addEmission, reload
+src/utils/emissions.ts                                   summarizeEmissions (suma en centésimas)
+src/pages/EmissionsTracker.tsx                           sin datos de ejemplo ni selector: solo compone useEmissions + componentes
+```
+
+**Problemas reales detectados y cómo se resolvieron**
+1. *Los tipos escritos a mano mentían.* Al generar `database.types.ts` con el CLI:
+   ```
+   src/services/inventory.service.ts(11,3): error TS2322: Type 'string' is not assignable to type 'ProductCategory'.
+   ```
+   `products.category` es `text + check` en SQL; el archivo manual de EcoTech lo declaraba como unión literal. Se corrigió con un
+   type guard `isProductCategory` en el mapper (sin cast). Es justo el valor de `supabase gen types`: detectar en compilación que el esquema no es lo que el código cree.
+2. *Warning de oxlint en la primera versión del hook:*
+   ```
+   src/hooks/useEmissions.ts:53:5: warning react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+   ```
+   `setLoading(true)` dentro del efecto. Se rediseñó: cada carga tiene una clave `userId:reloadToken` y `loading` se **deriva**
+   (`result.key !== requestKey`), sin setState síncrono en el efecto.
+3. *StrictMode creaba dos usuarios anónimos por carga.* Experimento real quitando la deduplicación de `ensureUser()` y contando en `auth.users`:
+   ```
+   SIN dedupe -> usuarios anonimos creados en 1 carga: 2
+   CON dedupe -> usuarios anonimos creados en 1 carga: 1
+   ```
+   Solución: una promesa en vuelo compartida (`pending ??= resolveUser()`) en el servicio.
+4. *Hallazgo 1 de la Iteración 1 resuelto:* sin variables de Supabase la app ahora muestra en la UI
+   "Falta configurar VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en .env (ver .env.example), o usa VITE_USE_MOCK=true" (captura
+   `docs/evidencias/iter-2/sin-config-error-visible.png`) en vez de una pantalla en blanco.
+5. *Ajuste al contrato del prompt:* el prompt pedía `error` único; un fallo al insertar habría reemplazado el listado por la pantalla de error.
+   Se separó `submitError` (error del envío, mostrado en el formulario) de `error` (error de carga).
+
+**Evolución del código (antes → después)**
+```ts
+// Iteración 1 (EmissionsTracker): estado y datos dentro de la página
+const [emissions, setEmissions] = useState<Emission[]>(SAMPLE_EMISSIONS)
+setEmissions((prev) => [created, ...prev])            // inserción local, sin BD ni errores
+// Iteración 2: la página solo compone; la lógica vive en el hook
+const { emissions, loading, error, isSubmitting, submitError, addEmission, reload } = useEmissions()
+const saved = await addEmission({ ... }); if (saved) setForm(EMPTY_FORM)   // limpia solo si se guardó
+```
+
+**Cómo el hook evita setState tras desmontar y la doble carga en StrictMode**
+- Carga: el efecto marca `active = false` en su limpieza; la respuesta de un efecto ya limpiado (el primero de StrictMode o un reload anterior) se descarta.
+- Mutación: `mountedRef` evita `setState` si el componente se desmontó durante `await service.create()`; `submittingRef` bloquea doble envío.
+- Sesión: la promesa compartida de `ensureUser()` evita dos `signInAnonymously` (ver problema 3).
+
+**Prueba RLS en psql** (`supabase/tests/rls_emisiones.sql`, salida completa en `docs/evidencias/iter-2/rls-psql.txt`):
+```
+1. A inserta 2 filas sin enviar owner_id → owner_es_a = t (lo puso auth.uid())
+2. B lista → filas_visibles_para_b = 0
+3. B fija owner_id de A → ERROR: permission denied for table emisiones            (grant por columnas)
+3b. con grant temporal de owner_id → ERROR: new row violates row-level security policy (RLS: defensa en profundidad)
+4. B fija medido_en → permission denied · 5. B update/delete → permission denied
+6. co2_kg = 0 → violates check constraint "emisiones_co2_kg_check" · fuente '  X  ' → "emisiones_fuente_check"
+7. JWT sin sub → violates row-level security policy · 8. anon select/insert → permission denied
+9. A lista → filas_visibles_para_a = 2
+```
+
+**Prueba manual en el navegador** (Playwright 1.64.1, script temporal):
+- Supabase: carga inicial OK · inserción válida aparece sin recargar y limpia el formulario · CO₂ = 0 → la BD responde 400 (23514) y la UI
+  muestra "Algún dato no cumple las reglas…" conservando lo escrito · tras recargar, la medición persiste (misma sesión anónima).
+- Mock (`VITE_USE_MOCK=true`, sin `.env`): carga los 4 datos semilla, inserta y valida igual que la BD.
+
+**Hallazgos para la Iteración 3** (observados en capturas y pruebas, no corregidos aún):
+- Durante la carga y con error, el resumen muestra `0.00 kg CO₂e` (engañoso); la prueba automatizada incluso confundió el resumen con datos.
+- El mensaje de la BD es genérico ("algún dato no cumple…"): falta validación en el cliente que señale **qué** campo falla, antes de ir a la red.
+- El formulario sigue habilitado aunque no haya sesión o la carga haya fallado.
+- `summarizeEmissions` se recalcula en cada render (incluido cada tecleo en el formulario); las tarjetas se re-renderizan al escribir.
+- Pendientes de la Iteración 1: cast en el `<select>`, separador de miles, `role="alert"`/`aria-busy`, encabezado del resumen.
+
+**Verificación:** `tsc -b` exit 0 · `oxlint` exit 0 · `vitest run` 17/17 (summarize, toAppError, mock) · `vite build` OK · `db:lint` "No schema errors found" · `migration list --local` local = remoto en ambas migraciones.
 
 ## Iteración 3 — Refinamiento
 

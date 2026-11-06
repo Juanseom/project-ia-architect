@@ -1,2 +1,2 @@
-export { supabase } from './client'
+export { getSupabase } from './client'
 export type { Database } from './database.types'

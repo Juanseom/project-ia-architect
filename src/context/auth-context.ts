@@ -1,9 +1,9 @@
 import { createContext } from 'react'
-import type { AuthSession } from '../services'
+import type { AuthState } from '../types'
 
-export interface AuthContextValue {
-  session: AuthSession | null
-  loading: boolean
+export type AuthContextValue = AuthState & {
+  /** Reintenta iniciar la sesión tras un error. */
+  retry: () => void
   signOut: () => Promise<void>
 }
 

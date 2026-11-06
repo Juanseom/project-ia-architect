@@ -25,3 +25,11 @@ dist-ssr
 
 # Env
 .env
+
+# Laboratorio previo (MentorLink): proyecto independiente, no forma parte de EcoTrack
+mentorlink/
+
+# Evidencias temporales de Playwright / Vitest
+test-results/
+playwright-report/
+coverage/

@@ -1,4 +1,7 @@
 import type { Session } from '@supabase/supabase-js'
+
+// Alias para que capas superiores no importen el SDK de Supabase.
+export type AuthSession = Session
 import { supabase } from './supabase'
 
 export async function getSession(): Promise<Session | null> {

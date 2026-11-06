@@ -1,8 +1,8 @@
 import { createContext } from 'react'
-import type { Session } from '@supabase/supabase-js'
+import type { AuthSession } from '../services'
 
 export interface AuthContextValue {
-  session: Session | null
+  session: AuthSession | null
   loading: boolean
   signOut: () => Promise<void>
 }

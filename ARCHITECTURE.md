@@ -42,3 +42,47 @@ Flujo real: `InventoryPage` → `useProducts()` → `inventoryService.getProduct
 3. **Escalable:** un dominio nuevo (proveedores) se añade como `types/supplier.ts` + `supplier.service.ts` + `useSuppliers.ts` + `components/suppliers/`, sin tocar lo existente.
 4. **Revisable:** la regla "¿este componente importa `services`?" es fácil de comprobar en un code review, y los README guían a los juniors sin depender de un senior.
 5. **Bundle controlado:** un único cliente Supabase y barrels por capa evitan duplicar dependencias.
+
+---
+
+# Extensión — EcoTrack · Dashboard de Emisiones en Tiempo Real
+
+El laboratorio "Spec-to-Code" reutiliza este mismo plano. Emisiones entra como **dominio nuevo**
+siguiendo la regla de escalabilidad del punto 4.3: se agregan archivos, no se reescriben los de inventario.
+La especificación funcional y los criterios de aceptación están en [docs/SPEC.md](docs/SPEC.md).
+
+## 5. Archivos del dominio emisiones
+
+```
+src/types/emission.ts                 Emission, EmissionCategory, NewEmission
+src/utils/formatters.ts               etiquetas con tilde ("Energía") y formato kg CO₂e
+src/services/emissions.service.ts     interfaz EmissionsService + impl. Supabase + impl. mock
+src/hooks/useEmissions.ts             carga, inserción, errores y Realtime
+src/components/emissions/             EmissionCard, EmissionList, EmissionForm, EmissionsSummary, estados
+src/pages/EmissionsTracker.tsx        contenedor: único consumidor de useEmissions
+supabase/migrations/<ts>_crear_emisiones.sql
+```
+
+Flujo: `EmissionsTracker` → `useEmissions()` → `emissionsService` → `supabase.from('emisiones')`.
+Realtime: `useEmissions` se suscribe a INSERTs mediante una función del servicio, que devuelve la
+función de limpieza; el hook nunca ve el canal de Supabase.
+
+## 6. Decisiones (ADR resumidos)
+
+| # | Decisión | Motivo |
+|---|---|---|
+| D1 | `EmissionsTracker` vive en `pages/` y es el único que llama a `useEmissions`. | Es un contenedor, como `InventoryPage`; los componentes quedan presentacionales y testeables. |
+| D2 | `EmissionsService` es una interfaz con implementaciones Supabase y mock, elegida con `VITE_USE_MOCK`. | Demuestra el "cambio aislado" (4.1), permite demo sin BD y probar el hook sin red. |
+| D3 | La migración revoca todos los privilegios por defecto y concede `select` + `insert (fuente, categoria, co2_kg)`. | Supabase da `ALL` a `anon`/`authenticated` en `public`; sin el revoke el grant por columnas no protege `owner_id`. |
+| D4 | RLS `to authenticated` con `(select auth.uid())`; sin políticas de update/delete. | Lección de MentorLink: autorizar con lo que controla el servidor, no el cliente. |
+| D5 | Sesión anónima de Supabase (`enable_anonymous_sign_ins = true`). | RLS real por usuario sin fricción de login en la demo. **En producción** requiere CAPTCHA/Turnstile o login real para evitar abuso. |
+| D6 | Reglas de capas verificadas por `oxlint` (`no-restricted-imports` con overrides por carpeta). | La regla "¿este componente importa services?" deja de depender de la revisión manual. |
+| D7 | Tailwind CSS v4 con `@tailwindcss/vite` y tokens en `@theme`. | Método vigente para Vite; sin `tailwind.config.js`. |
+| D8 | Supabase CLI fijado en la línea `v2.stable` (2.122.1). | Es la versión probada en MentorLink; la 3.0.0 salió como mayor reciente y no aporta nada al lab. |
+| D9 | Vitest 5 + Testing Library + jsdom. | Comparte la configuración de Vite; prueba hooks y componentes sin navegador real. |
+
+## 7. Deuda técnica conocida (heredada de EcoTech)
+
+- `0001_create_products.sql` usa `auth.uid()` sin envolver en `select` y políticas sin `to authenticated`.
+  No se edita (regla: una migración aplicada no se modifica); se corregiría con una migración nueva.
+- `database.types.ts` estaba escrito a mano; desde la Iteración 2 se genera con `npm run db:types`.

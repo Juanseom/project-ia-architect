@@ -1,4 +1,5 @@
 # styles/
 
-Estilos globales y tokens de diseño (variables CSS). Los estilos específicos de un
-componente viven junto a él (`Button.module.css`).
+Entrada de **Tailwind CSS v4** (`@import 'tailwindcss'`) y tokens de diseño en `@theme`
+(`brand-*`, `ink-*`, `surface`). Los componentes se estilizan con utilidades de Tailwind;
+no se crean hojas de estilo por componente.

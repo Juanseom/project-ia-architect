@@ -43,4 +43,12 @@ describe('Enrutamiento con React.lazy + Suspense', () => {
     })
     expect(screen.getByRole('heading', { level: 1, name: 'Dashboard de emisiones' })).toBeInTheDocument()
   })
+
+  it('EcoFlow: /proyectos carga su chunk perezoso con el tablero (modo mock)', async () => {
+    render(<App />)
+    await userEvent.click(screen.getByRole('link', { name: 'Proyectos' }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Proyectos de instalación' })).toBeInTheDocument()
+    expect(await screen.findByText('Granja Solar Norte', {}, { timeout: 3000 })).toBeInTheDocument()
+  })
 })
+

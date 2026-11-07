@@ -104,3 +104,18 @@ Etiquetas visibles: Transporte, Energía, Residuos. CO₂ se muestra como `kg CO
 | CA-23 | El SDK de Supabase y el mock no están en la ruta crítica; las rutas secundarias se cargan con `React.lazy` + `Suspense`. | ✅ | `dist/index.html`, `bundle-despues.txt`, `routing.integration.test.tsx` |
 | CA-24 | FCP y LCP mejoran ≥ 15 % con red 3G rápida + CPU 4× (mediana de ≥ 7 corridas). | ✅ | `docs/evidencias/lab5/rendimiento.txt` (−22,1 % ambos) |
 | CA-25 | Los tests no usan red ni el Supabase local. | ✅ | `vite.config.ts` → `test.env` (modo mock) |
+
+## 9. Proyecto final — EcoFlow (gestión de proyectos solares)
+
+Especificación completa: [docs/prompts/08-prompt-maestro-ecoflow.md](prompts/08-prompt-maestro-ecoflow.md).
+Arquitectura y evidencias: [docs/ARQUITECTURA_ECOFLOW.md](ARQUITECTURA_ECOFLOW.md).
+
+| ID | Criterio | Estado | Evidencia |
+|---|---|---|---|
+| EF-01 | Instalador asignado ve solo su proyecto; no asignado 0; otro coordinador 0; anon sin privilegios. | ✅ | `supabase/tests/ecoflow_rls.sql`, E2E pasos 05 y 07 |
+| EF-02 | Un proyecto no puede usar instaladores/materiales de otro coordinador (FK compuesta); creación atómica. | ✅ | `ecoflow_rls.sql` (EF-02) |
+| EF-03 | Transiciones inválidas rechazadas por la BD; el instalador no reabre; `estado` no editable por UPDATE. | ✅ | `ecoflow_rls.sql` (EF-03), `utils/projects.test.ts` |
+| EF-04 | Código de invitación de un solo uso; inválido y usado dan el mismo error; propio rechazado. | ✅ | `ecoflow_rls.sql` (EF-04), E2E paso 08, `useProjects.test.tsx` |
+| EF-05 | El formulario no envía datos inválidos; errores por campo accesibles y foco al primero. | ✅ | `project-form.integration.test.tsx`, E2E paso 02 |
+| EF-06 | Conteo y kW por estado correctos desde la BD (vista security_invoker). | ✅ | `ecoflow_rls.sql` (EF-06), E2E paso 09 |
+| EF-07 | typecheck, lint, tests, build y db:lint verdes; sin regresiones de EcoTrack ni del Lab 5. | ✅ | 116/116 tests; regresiones SQL y E2E de EcoTrack |

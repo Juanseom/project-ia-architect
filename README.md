@@ -1,7 +1,10 @@
-# EcoTrack · Dashboard de Emisiones en Tiempo Real
+# EcoTrack + EcoFlow · Plataforma de sostenibilidad
 
-Dashboard de huella de carbono para empresas: listado de mediciones en tarjetas (fuente, categoría y CO₂),
-formulario accesible para registrar nuevas, resumen total y por categoría, y actualización **en tiempo real**.
+Una misma arquitectura por capas con dos dominios:
+- **EcoTrack** (`/`): dashboard de huella de carbono en tiempo real (mediciones, resumen, Realtime).
+- **EcoFlow** (`/proyectos`, `/equipo`): gestión de proyectos de instalación de paneles solares — tablero por estado
+  (Pendiente / En progreso / Completado), formulario validado, instaladores con código de invitación y RLS
+  para que cada instalador vea solo sus proyectos asignados. Documento: [docs/ARQUITECTURA_ECOFLOW.md](docs/ARQUITECTURA_ECOFLOW.md).
 
 **Stack:** React 19 · TypeScript 7 (strict + `noUncheckedIndexedAccess`) · Vite 8 · Tailwind CSS v4 ·
 Supabase (Postgres 17, RLS, Realtime, sesión anónima) · Vitest 5 + Testing Library · Playwright · oxlint.
@@ -69,11 +72,14 @@ Usa un servicio en memoria con datos de ejemplo y las mismas reglas de validaci�
 Pruebas de RLS y hardening en psql (sin dejar datos):
 `docker exec -i supabase_db_ecotrack psql -U postgres < supabase/tests/rls_emisiones.sql`
 `docker exec -i supabase_db_ecotrack psql -U postgres < supabase/tests/hardening_lab5.sql`
+`docker exec -i supabase_db_ecotrack psql -U postgres < supabase/tests/ecoflow_rls.sql`
+
+E2E de EcoFlow con 3 usuarios (coordinador, instaladora, ajeno): `node scripts/ecoflow-evidence.mjs` (con `npm run dev` arriba).
 
 ## Arquitectura en una línea
 
 `EmissionsTracker` → `useEmissions` / `useEmissionForm` → `emissionsService` → `getSupabase()` (SDK cargado con `import()`) → tabla `emisiones` + vista `emisiones_resumen` (RLS) + canal Realtime.
-Rutas: `/` (dashboard, eager) y `/inventario` (módulo EcoTech, `React.lazy`); 404 perezosa.
+Rutas: `/` (dashboard, eager); `/proyectos`, `/equipo` (EcoFlow) e `/inventario` (EcoTech) con `React.lazy`; 404 perezosa.
 Solo `src/services/` importa `@supabase/supabase-js`; los componentes solo reciben props. `npm run lint` lo hace cumplir.
 Detalle y decisiones en [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -96,3 +102,4 @@ Detalle y decisiones en [ARCHITECTURE.md](ARCHITECTURE.md).
 - [docs/BITACORA_PROMPTS.md](docs/BITACORA_PROMPTS.md) y [docs/prompts/](docs/prompts/): los 4 prompts y la evolución del código.
 - [docs/evidencias/](docs/evidencias/): capturas por iteración, prueba RLS, contraste WCAG y `final/` (generadas con `npm run evidence`).
 - [docs/AUDITORIA_LAB5.md](docs/AUDITORIA_LAB5.md) y [docs/evidencias/lab5/](docs/evidencias/lab5/): auditoría de seguridad, bundle y rendimiento (Lab 5).
+- [docs/ARQUITECTURA_ECOFLOW.md](docs/ARQUITECTURA_ECOFLOW.md), [docs/diagrama-er-ecoflow.mmd](docs/diagrama-er-ecoflow.mmd) y [docs/evidencias/ecoflow/](docs/evidencias/ecoflow/): proyecto final EcoFlow.

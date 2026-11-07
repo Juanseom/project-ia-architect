@@ -1,0 +1,67 @@
+== Preparación: A crea 2 instaladores, 1 material y 2 proyectos (uno asignado a Ana)
+   nombre   | tiene_codigo 
+ Ana Solar  | t
+ Luis Techo | t
+== EF-04 Vinculación: B canjea el código de Ana, C el de Luis
+ b_quedo_vinculado_a 
+ Ana Solar
+ c_quedo_vinculado_a 
+ Luis Techo
+-- D intenta reutilizar el código de Ana (esperado: Código inválido o ya utilizado)
+ERROR:  Código inválido o ya utilizado.
+HINT:  codigo_invalido
+-- D prueba un código inventado (esperado: mismo mensaje, no distingue)
+ERROR:  Código inválido o ya utilizado.
+HINT:  codigo_invalido
+== EF-01 Visibilidad de proyectos
+      actor      | proyectos_visibles 
+ A (coordinador) |                  2
+    actor     | proyectos_visibles 
+ B (asignado) | Granja Solar Norte
+         actor         | materiales  
+ B materiales visibles | Panel 550 W
+          actor          | instaladores 
+ B instaladores visibles | Ana Solar
+      actor      | proyectos_visibles 
+ C (no asignado) |                  0
+        actor         | proyectos_visibles | materiales | instaladores 
+ D (otro coordinador) |                  0 |          0 |            0
+ actor |     privilegios     
+ anon  | (ningún privilegio)
+== EF-02 Integridad multi-tenant: D usa el id (filtrado) del instalador y del material de A
+ERROR:  insert or update on table "proyectos" violates foreign key constraint "proyectos_instalador_fkey"
+DETAIL:  Key is not present in table "instaladores".
+ERROR:  insert or update on table "proyecto_materiales" violates foreign key constraint "proyecto_materiales_material_fkey"
+DETAIL:  Key is not present in table "materiales".
+-- D no dejó un proyecto a medias (crear_proyecto es atómico): proyectos de D =
+ proyectos_de_d 
+              0
+== EF-03 Transiciones de estado
+-- C (no asignado) intenta mover la Granja (esperado: Proyecto no encontrado)
+ERROR:  Proyecto no encontrado.
+-- B (asignado) salta pendiente → completado (esperado: Transición no permitida)
+ERROR:  Transición no permitida: pendiente → completado.
+HINT:  transicion_invalida
+-- B avanza correctamente pendiente → en_progreso → completado
+   paso_1    
+ en_progreso
+   paso_2   
+ completado
+-- B intenta reabrir (solo coordinador; esperado: Transición no permitida)
+ERROR:  Transición no permitida: completado → en_progreso.
+HINT:  transicion_invalida
+-- B intenta cambiar el estado con UPDATE directo, sin la RPC (esperado: permission denied)
+ERROR:  permission denied for table proyectos
+HINT:  Grant the required privileges to the current role with: GRANT UPDATE ON public.proyectos TO authenticated;
+-- A inicia el Colegio sin instalador asignado (esperado: Asigna un instalador)
+ERROR:  Asigna un instalador antes de iniciar el proyecto.
+HINT:  sin_instalador
+-- A reabre la Granja (coordinador sí puede)
+  reabierto  
+ en_progreso
+== EF-06 Resumen del dashboard (vista security_invoker)
+ actor |   estado    | proyectos | capacidad_kw 
+ A     | pendiente   |         1 |        35.00
+ A     | en_progreso |         1 |       120.50
+ actor |   estado    | proyectos | capacidad_kw 
+ B     | en_progreso |         1 |       120.50

@@ -6,3 +6,5 @@ export type { EmissionsService } from './emissions.service'
 // Tests y modo demo lo cargan directamente desde './emissions.mock'.
 export { AppError, ERROR_MESSAGES, getErrorMessage, toAppError } from './errors'
 export type { AppErrorKind } from './errors'
+export { projectsService, supabaseProjectsService } from './projects.service'
+export type { ProjectsService } from './projects.service'

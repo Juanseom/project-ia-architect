@@ -8,4 +8,6 @@ Remoto: `npx supabase db push`.
 `tests/rls_emisiones.sql`: prueba de RLS y privilegios con dos usuarios y `anon` (en transacción con ROLLBACK):
 `docker exec -i supabase_db_ecotrack psql -U postgres < supabase/tests/rls_emisiones.sql`
 
+`tests/ecoflow_rls.sql`: EcoFlow con 4 actores (RLS, FKs compuestas, transiciones, códigos de invitación, resumen).
+
 `tests/hardening_lab5.sql`: privilegios de `products`, SKU por dueño, límites de escritura (PT429) y vista `emisiones_resumen`. El código cliente vive en `src/services/supabase/`.

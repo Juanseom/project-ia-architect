@@ -1,5 +1,6 @@
 export type * from './product'
 export type * from './common'
 export type * from './auth'
-// emission exporta además la constante EMISSION_CATEGORIES (dato, no lógica).
+// emission y project exportan además constantes de dominio (EMISSION_CATEGORIES, PROJECT_STATUSES…).
 export * from './emission'
+export * from './project'

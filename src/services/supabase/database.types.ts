@@ -37,6 +37,34 @@ export type Database = {
                   Relationships: [
                     
                   ]
+                },"instaladores": {
+                  Row: {
+                    "codigo_invitacion": string,"coordinador_id": string,"created_at": string,"especialidad": Database["public"]['Enums']["especialidad_instalador"],"id": string,"nombre": string,"user_id": string | null,"vinculado_en": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "codigo_invitacion"?: string,"coordinador_id"?: string,"created_at"?: string,"especialidad"?: Database["public"]['Enums']["especialidad_instalador"],"id"?: string,"nombre": string,"user_id"?: string | null,"vinculado_en"?: string | null
+                  }
+                  Update: {
+                    "codigo_invitacion"?: string,"coordinador_id"?: string,"created_at"?: string,"especialidad"?: Database["public"]['Enums']["especialidad_instalador"],"id"?: string,"nombre"?: string,"user_id"?: string | null,"vinculado_en"?: string | null
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"materiales": {
+                  Row: {
+                    "coordinador_id": string,"costo_unitario": number,"created_at": string,"id": string,"nombre": string,"unidad": Database["public"]['Enums']["unidad_material"]
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "coordinador_id"?: string,"costo_unitario"?: number,"created_at"?: string,"id"?: string,"nombre": string,"unidad"?: Database["public"]['Enums']["unidad_material"]
+                  }
+                  Update: {
+                    "coordinador_id"?: string,"costo_unitario"?: number,"created_at"?: string,"id"?: string,"nombre"?: string,"unidad"?: Database["public"]['Enums']["unidad_material"]
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"products": {
                   Row: {
                     "carbon_footprint_kg": number,"category": string,"created_at": string,"id": string,"name": string,"owner_id": string,"sku": string,"stock": number
@@ -51,6 +79,52 @@ export type Database = {
                   Relationships: [
                     
                   ]
+                },"proyecto_materiales": {
+                  Row: {
+                    "cantidad": number,"coordinador_id": string,"material_id": string,"proyecto_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "cantidad": number,"coordinador_id"?: string,"material_id": string,"proyecto_id": string
+                  }
+                  Update: {
+                    "cantidad"?: number,"coordinador_id"?: string,"material_id"?: string,"proyecto_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "proyecto_materiales_material_fkey"
+      columns: ["material_id","coordinador_id"]
+isOneToOne: false
+      referencedRelation: "materiales"
+      referencedColumns: ["id","coordinador_id"]
+    },{
+      foreignKeyName: "proyecto_materiales_proyecto_fkey"
+      columns: ["proyecto_id","coordinador_id"]
+isOneToOne: false
+      referencedRelation: "proyectos"
+      referencedColumns: ["id","coordinador_id"]
+    }
+                  ]
+                },"proyectos": {
+                  Row: {
+                    "capacidad_kw": number,"cliente": string,"coordinador_id": string,"created_at": string,"estado": Database["public"]['Enums']["estado_proyecto"],"fecha_fin_estimada": string,"fecha_inicio": string,"id": string,"instalador_id": string | null,"nombre": string,"ubicacion": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "capacidad_kw": number,"cliente": string,"coordinador_id"?: string,"created_at"?: string,"estado"?: Database["public"]['Enums']["estado_proyecto"],"fecha_fin_estimada": string,"fecha_inicio": string,"id"?: string,"instalador_id"?: string | null,"nombre": string,"ubicacion": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "capacidad_kw"?: number,"cliente"?: string,"coordinador_id"?: string,"created_at"?: string,"estado"?: Database["public"]['Enums']["estado_proyecto"],"fecha_fin_estimada"?: string,"fecha_inicio"?: string,"id"?: string,"instalador_id"?: string | null,"nombre"?: string,"ubicacion"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "proyectos_instalador_fkey"
+      columns: ["instalador_id","coordinador_id"]
+isOneToOne: false
+      referencedRelation: "instaladores"
+      referencedColumns: ["id","coordinador_id"]
+    }
+                  ]
                 }
           }
           Views: {
@@ -62,13 +136,79 @@ export type Database = {
                   Relationships: [
                     
                   ]
+                },"proyectos_resumen": {
+                  Row: {
+                    "capacidad_kw": number | null,"estado": Database["public"]['Enums']["estado_proyecto"],"proyectos": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
                 }
           }
           Functions: {
-            [_ in never]: never
+            "cambiar_estado_proyecto":
+{ Args: { "p_estado": Database["public"]['Enums']["estado_proyecto"],"p_proyecto_id": string }; Returns: {
+              "capacidad_kw": number,
+"cliente": string,
+"coordinador_id": string,
+"created_at": string,
+"estado": Database["public"]['Enums']["estado_proyecto"],
+"fecha_fin_estimada": string,
+"fecha_inicio": string,
+"id": string,
+"instalador_id": string | null,
+"nombre": string,
+"ubicacion": string,
+"updated_at": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "proyectos"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"crear_proyecto":
+{ Args: { "p_capacidad_kw": number,"p_cliente": string,"p_fecha_fin_estimada": string,"p_fecha_inicio": string,"p_instalador_id"?: string,"p_materiales"?: Json,"p_nombre": string,"p_ubicacion": string }; Returns: {
+              "capacidad_kw": number,
+"cliente": string,
+"coordinador_id": string,
+"created_at": string,
+"estado": Database["public"]['Enums']["estado_proyecto"],
+"fecha_fin_estimada": string,
+"fecha_inicio": string,
+"id": string,
+"instalador_id": string | null,
+"nombre": string,
+"ubicacion": string,
+"updated_at": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "proyectos"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"vincular_instalador":
+{ Args: { "p_codigo": string }; Returns: {
+              "codigo_invitacion": string,
+"coordinador_id": string,
+"created_at": string,
+"especialidad": Database["public"]['Enums']["especialidad_instalador"],
+"id": string,
+"nombre": string,
+"user_id": string | null,
+"vinculado_en": string | null
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "instaladores"
+        isOneToOne: true
+        isSetofReturn: false
+      } }
           }
           Enums: {
-            "categoria_emision": "transporte"|"energia"|"residuos"
+            "categoria_emision": "transporte"|"energia"|"residuos","especialidad_instalador": "general"|"electrica"|"estructural"|"mantenimiento","estado_proyecto": "pendiente"|"en_progreso"|"completado","unidad_material": "unidad"|"metro"|"kg"|"juego"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -188,7 +328,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "categoria_emision": ["transporte", "energia", "residuos"]
+            "categoria_emision": ["transporte", "energia", "residuos"],"especialidad_instalador": ["general", "electrica", "estructural", "mantenimiento"],"estado_proyecto": ["pendiente", "en_progreso", "completado"],"unidad_material": ["unidad", "metro", "kg", "juego"]
           }
         }
 } as const

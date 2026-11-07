@@ -3,3 +3,5 @@
 export { InventoryPage } from './InventoryPage'
 export { EmissionsTracker } from './EmissionsTracker'
 export { NotFoundPage } from './NotFoundPage'
+export { ProjectsPage } from './ProjectsPage'
+export { TeamPage } from './TeamPage'

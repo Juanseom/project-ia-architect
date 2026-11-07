@@ -1,0 +1,43 @@
+erDiagram
+    AUTH_USERS ||--o{ INSTALADORES : "coordina (coordinador_id)"
+    AUTH_USERS |o--o| INSTALADORES : "se vincula (user_id, código 1 uso)"
+    AUTH_USERS ||--o{ MATERIALES : "posee catálogo (coordinador_id)"
+    AUTH_USERS ||--o{ PROYECTOS : "coordina (coordinador_id)"
+    INSTALADORES |o--o{ PROYECTOS : "asignado (instalador_id, coordinador_id) FK compuesta"
+    PROYECTOS ||--o{ PROYECTO_MATERIALES : "usa (proyecto_id, coordinador_id) FK compuesta"
+    MATERIALES ||--o{ PROYECTO_MATERIALES : "se usa en (material_id, coordinador_id) FK compuesta"
+
+    INSTALADORES {
+        uuid id PK
+        uuid coordinador_id FK "auth.users, UNIQUE(id, coordinador_id)"
+        uuid user_id FK "UNIQUE, null hasta canjear el código"
+        text nombre "2..80"
+        enum especialidad "general|electrica|estructural|mantenimiento"
+        text codigo_invitacion UK "10 hex, generado por la BD"
+        timestamptz vinculado_en
+    }
+    MATERIALES {
+        uuid id PK
+        uuid coordinador_id FK "UNIQUE(coordinador_id, nombre)"
+        text nombre "2..80"
+        enum unidad "unidad|metro|kg|juego"
+        numeric costo_unitario ">= 0"
+    }
+    PROYECTOS {
+        uuid id PK
+        uuid coordinador_id FK
+        uuid instalador_id FK "null = sin asignar"
+        text nombre "3..120"
+        text cliente "2..120"
+        text ubicacion "2..160"
+        numeric capacidad_kw "(0, 100000]"
+        enum estado "pendiente|en_progreso|completado (solo vía RPC)"
+        date fecha_inicio
+        date fecha_fin_estimada ">= fecha_inicio"
+    }
+    PROYECTO_MATERIALES {
+        uuid proyecto_id PK
+        uuid material_id PK
+        uuid coordinador_id FK
+        numeric cantidad "> 0"
+    }

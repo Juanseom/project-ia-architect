@@ -5,15 +5,22 @@ export interface NavItem {
   label: string
 }
 
+export interface Brand {
+  name: string
+  tagline: string
+}
+
 export interface AppLayoutProps {
   children: ReactNode
+  /** Marca del módulo actual (EcoTrack / EcoFlow comparten la misma plataforma). */
+  brand: Brand
   nav: readonly NavItem[]
   currentPath: string
   /** Navegación del lado del cliente (sin recargar). */
   onNavigate: (href: string) => void
 }
 
-export function AppLayout({ children, nav, currentPath, onNavigate }: AppLayoutProps) {
+export function AppLayout({ children, brand, nav, currentPath, onNavigate }: AppLayoutProps) {
   const handleClick = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
     // Ctrl/Cmd/Shift-clic o botón central: comportamiento normal del navegador (nueva pestaña, etc.).
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
@@ -24,12 +31,12 @@ export function AppLayout({ children, nav, currentPath, onNavigate }: AppLayoutP
   return (
     <div className="min-h-screen">
       <header className="border-b border-ink-500/15 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4">
           <div className="flex items-center gap-3">
-            <span aria-hidden="true" className="grid size-9 place-items-center rounded-lg bg-brand-600 font-bold text-white">E</span>
+            <span aria-hidden="true" className="grid size-9 place-items-center rounded-lg bg-brand-600 font-bold text-white">{brand.name.charAt(3)}</span>
             <div>
-              <p className="font-semibold text-ink-900">EcoTrack</p>
-              <p className="text-xs text-ink-500">Monitoreo de huella de carbono</p>
+              <p className="font-semibold text-ink-900">{brand.name}</p>
+              <p className="text-xs text-ink-500">{brand.tagline}</p>
             </div>
           </div>
           <nav aria-label="Principal">
@@ -55,7 +62,7 @@ export function AppLayout({ children, nav, currentPath, onNavigate }: AppLayoutP
           </nav>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+      <main className="mx-auto max-w-7xl px-4 py-8">{children}</main>
     </div>
   )
 }

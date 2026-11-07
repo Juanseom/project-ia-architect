@@ -1,0 +1,30 @@
+Reporte: docs/evidencias/lab5/bundle-ecoflow-con-sideeffects.json
+
+Por paquete (código renderizado antes de minificar, % del total):
+  react-dom                     524.1 kB   50.0%   chunk: vendor-react-Br0ptrPz.js
+  @supabase/auth-js             169.7 kB   16.2%   chunk: vendor-supabase-Off5EfqE.js
+  @supabase/realtime-js          54.1 kB    5.2%   chunk: vendor-supabase-Off5EfqE.js
+  src/components                 53.7 kB    5.1%   chunk: index-Cv8-3RSm.js, InventoryPage-BHC1w1Dq.js, ProjectsPage-BlQ6N5C8.js, TeamPage-BQt8cLWo.js
+  @supabase/storage-js           41.4 kB    3.9%   chunk: vendor-supabase-Off5EfqE.js
+  @supabase/phoenix              39.8 kB    3.8%   chunk: vendor-supabase-Off5EfqE.js
+  @supabase/postgrest-js         30.4 kB    2.9%   chunk: vendor-supabase-Off5EfqE.js
+  src/services                   24.2 kB    2.3%   chunk: index-Cv8-3RSm.js, InventoryPage-BHC1w1Dq.js, emissions.mock-BYSK9AKw.js, projects.mock-OK089PjY.js, useTeam-D2W_S2e9.js
+  @supabase/supabase-js          20.4 kB    1.9%   chunk: vendor-supabase-Off5EfqE.js
+  src/hooks                      16.8 kB    1.6%   chunk: index-Cv8-3RSm.js, InventoryPage-BHC1w1Dq.js, ProjectsPage-BlQ6N5C8.js, useTeam-D2W_S2e9.js
+  react                          16.8 kB    1.6%   chunk: vendor-react-Br0ptrPz.js
+  src/pages                      12.8 kB    1.2%   chunk: index-Cv8-3RSm.js, InventoryPage-BHC1w1Dq.js, NotFoundPage-BXIbpa07.js, ProjectsPage-BlQ6N5C8.js, TeamPage-BQt8cLWo.js
+  src/utils                       9.4 kB    0.9%   chunk: index-Cv8-3RSm.js, useTeam-D2W_S2e9.js
+  scheduler                       9.0 kB    0.9%   chunk: vendor-react-Br0ptrPz.js
+
+Por chunk:
+  assets/vendor-react-Br0ptrPz.js           549.9 kB
+  assets/vendor-supabase-Off5EfqE.js        370.2 kB
+  assets/index-Cv8-3RSm.js                   51.3 kB
+  assets/ProjectsPage-BlQ6N5C8.js            30.5 kB
+  assets/useTeam-D2W_S2e9.js                 15.6 kB
+  assets/TeamPage-BQt8cLWo.js                14.2 kB
+  assets/projects.mock-OK089PjY.js            6.4 kB
+  assets/InventoryPage-BHC1w1Dq.js            6.1 kB
+  assets/emissions.mock-BYSK9AKw.js           1.8 kB
+  assets/NotFoundPage-BXIbpa07.js             0.9 kB
+  assets/rolldown-runtime-4tVxZq34.js         0.4 kB

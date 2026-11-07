@@ -5,6 +5,7 @@ Componentes **presentacionales** de React: reciben `props`, renderizan JSX y emi
 - `ui/`: átomos genéricos y reutilizables (Button, Card, Skeleton). No conocen el dominio.
 - `layout/`: estructura de la página (AppLayout, Header, Sidebar).
 - `inventory/`: componentes del dominio inventario (ProductList, ProductForm).
+- `projects/` y `team/`: EcoFlow (tablero, tarjetas, formulario de proyecto, equipo y catálogo).
 - `emissions/`: componentes del dominio emisiones de EcoTrack (EmissionCard, EmissionForm...).
 
 Reglas: prohibido importar `hooks/`, `services/`, `context/` o `supabase` (lo verifica `npm run lint`). Si un componente necesita datos,

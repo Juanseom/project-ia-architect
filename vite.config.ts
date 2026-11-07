@@ -51,7 +51,7 @@ export default defineConfig(({ mode }) => {
       include: ['src/**/*.test.{ts,tsx}'],
       // Los tests nunca tocan la red: Vitest carga el .env del proyecto y, sin esto, un test de App abría
       // sesiones y un WebSocket contra el Supabase local (detectado en el Lab 5). En modo mock no hay cliente Supabase.
-      env: { VITE_USE_MOCK: 'true', VITE_SUPABASE_URL: '', VITE_SUPABASE_ANON_KEY: '' },
+      env: { VITE_USE_MOCK: 'true', VITE_SUPABASE_URL: '', VITE_SUPABASE_ANON_KEY: '', TZ: 'America/Bogota' },
     },
   }
 })

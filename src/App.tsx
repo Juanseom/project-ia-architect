@@ -4,7 +4,7 @@ import { Suspense } from 'react'
 import { AppLayout, ErrorBoundary, PageSkeleton } from './components/layout'
 import { AuthProvider } from './context'
 import { navigate, usePathname } from './router'
-import { NAV_LINKS, NotFoundRoute, routes } from './routes'
+import { brandFor, NAV_LINKS, NotFoundRoute, routes } from './routes'
 
 /**
  * Shell de la app: layout + sesión + ruta actual. Las rutas secundarias se cargan con React.lazy (code splitting);
@@ -16,7 +16,7 @@ export default function App() {
 
   return (
     <AuthProvider>
-      <AppLayout nav={NAV_LINKS} currentPath={pathname} onNavigate={navigate}>
+      <AppLayout brand={brandFor(pathname)} nav={NAV_LINKS} currentPath={pathname} onNavigate={navigate}>
         <ErrorBoundary key={pathname}>
           <Suspense fallback={<PageSkeleton />}>
             <Page />

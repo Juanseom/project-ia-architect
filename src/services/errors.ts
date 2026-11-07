@@ -1,7 +1,7 @@
 // Traducción de errores técnicos (PostgrestError, AuthError, fallos de red, configuración)
 // a un error de dominio con mensaje en español. La UI nunca muestra el error crudo de Postgres.
 
-export type AppErrorKind = 'config' | 'auth' | 'permission' | 'validation' | 'rateLimit' | 'network' | 'unknown'
+export type AppErrorKind = 'config' | 'auth' | 'permission' | 'validation' | 'notFound' | 'conflict' | 'rateLimit' | 'network' | 'unknown'
 
 export class AppError extends Error {
   readonly kind: AppErrorKind
@@ -24,6 +24,9 @@ export const ERROR_MESSAGES = {
   rateLimitBatch: 'Solo se pueden enviar hasta 10 mediciones por solicitud.',
   rateLimitMinute: 'Estás registrando mediciones muy rápido. Espera un minuto e inténtalo de nuevo.',
   quota: 'Tu cuenta alcanzó el máximo de 5000 mediciones.',
+  notFound: 'No se encontró el registro (puede que ya no tengas acceso).',
+  invalidReference: 'El instalador o material seleccionado no es válido para tu equipo.',
+  duplicate: 'Ya existe un registro igual (revisa nombres o materiales repetidos).',
   unknown: 'Ocurrió un error inesperado. Inténtalo de nuevo.',
 } as const
 
@@ -32,6 +35,9 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const readString = (record: Record<string, unknown>, key: string): string =>
   typeof record[key] === 'string' ? record[key] : ''
+
+// Excepciones de negocio escritas por nosotros en las RPC de EcoFlow (mensaje en español, seguro de mostrar).
+const BUSINESS_HINTS = new Set(['transicion_invalida', 'sin_instalador', 'codigo_invalido', 'codigo_propio', 'ya_vinculado', 'materiales_invalidos'])
 
 const NETWORK_PATTERN = /failed to fetch|fetch failed|networkerror|network request failed|load failed/i
 
@@ -49,6 +55,16 @@ export function toAppError(error: unknown): AppError {
   }
 
   switch (code) {
+    case 'P0001': // raise exception de nuestras funciones
+    case '22023':
+      if (BUSINESS_HINTS.has(hint) && message !== '') return new AppError('validation', message, { cause: error })
+      return new AppError('unknown', ERROR_MESSAGES.unknown, { cause: error })
+    case 'P0002': // no_data_found (proyecto inexistente o ajeno: mismo error a propósito)
+      return new AppError('notFound', ERROR_MESSAGES.notFound, { cause: error })
+    case '23503': // foreign_key_violation (FK compuesta: instalador/material de otro coordinador)
+      return new AppError('validation', ERROR_MESSAGES.invalidReference, { cause: error })
+    case '23505': // unique_violation
+      return new AppError('conflict', ERROR_MESSAGES.duplicate, { cause: error })
     case '42501': // insufficient_privilege / violación de política RLS
       return new AppError('permission', ERROR_MESSAGES.permission, { cause: error })
     case 'PGRST301':

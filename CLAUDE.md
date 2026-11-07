@@ -5,6 +5,7 @@ Repo de laboratorios de la Maestría (Escuela Colombiana de Ingeniería). Contie
 - **EcoTech Inventory** (lab 1): scaffolding por capas, dominio `products`.
 - **EcoTrack** (lab actual, "Spec-to-Code"): Dashboard de Emisiones en Tiempo Real, construido como dominio nuevo
   sobre la misma arquitectura. Spec en `docs/SPEC.md`, decisiones en `ARCHITECTURE.md`, bitácora en `docs/BITACORA_PROMPTS.md`.
+- **EcoFlow** (proyecto final): gestión de proyectos solares en `/proyectos` y `/equipo`, mismo stack y capas.
 - `mentorlink/` es otro lab (infra Supabase) y está en `.gitignore`. No tocarlo.
 
 ## Cómo trabajamos
@@ -48,6 +49,11 @@ node scripts/measure-performance.mjs <dist-a> <dist-b>          # FCP/LCP con 3G
 Lab "Spec-to-Code" cerrado (tags `fase-0`…`iter-4`, `docs/ENTREGA.md`).
 Lab 5 "Auditoría y optimización" cerrado (tag `lab5`): informe en `docs/AUDITORIA_LAB5.md`, entrega en `docs/ENTREGA_LAB5.md`,
 prompts 05–07, evidencias en `docs/evidencias/lab5/`.
+Proyecto final EcoFlow cerrado (tag `ecoflow`): dominio nuevo (proyectos/instaladores/materiales), prompts 08–10,
+`docs/ARQUITECTURA_ECOFLOW.md`, `docs/ENTREGA_FINAL.md`, evidencias en `docs/evidencias/ecoflow/`.
+- Roles EcoFlow derivados: coordinador = coordinador_id; instalador = user_id vinculado por RPC `vincular_instalador`.
+- `estado` de proyectos solo cambia por la RPC `cambiar_estado_proyecto`; crear con la RPC `crear_proyecto` (invoker).
+- `package.json` tiene `"sideEffects": ["**/*.css"]`: sin eso los barrels arrastran EcoFlow al chunk inicial.
 
 ## Definición de terminado
 typecheck/lint/test/build verdes · capas respetadas · barrels y READMEs al día · feedback de loading/error/vacío/éxito

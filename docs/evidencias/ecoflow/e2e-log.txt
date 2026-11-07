@@ -1,0 +1,13 @@
+01 coordinador A: 2 instaladores y 3 materiales creados; código de Ana = 10 caracteres
+02 validación: envío vacío bloqueado, 6 campos aria-invalid, foco en project-name
+03 coordinador A: 3 proyectos creados con la RPC atómica; tablero pendiente = 3
+04 instaladora B: vinculada como Ana Solar con el código (escrito en minúsculas)
+05 RLS: B ve 1 proyecto(s): Granja Solar Norte (esperado: solo Granja Solar Norte)
+06 B avanzó su proyecto: Pendiente → En progreso (RPC cambiar_estado_proyecto)
+07 RLS: el usuario C (sin vínculo) ve 0 proyectos
+08 C reutiliza el código de Ana → "Código inválido o ya utilizado."
+09 A recarga: En progreso = Granja Solar Norte | resumen (BD) = 2 proyectos, 115 kW · 1 proyecto, 120,5 kW · 0 proyectos, 0 kW · 235,5 kW
+10 sin instalador, "Techo Colegio" no ofrece "Iniciar": 0 botones
+06 movil-iphone13: viewport 390px, sin scroll horizontal
+07 tablet-ipad-mini: viewport 768px, sin scroll horizontal
+consola: sin errores inesperados
